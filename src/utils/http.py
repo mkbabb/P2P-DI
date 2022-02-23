@@ -84,10 +84,23 @@ def make_request(
     return _make_response(start_line, headers, body)
 
 
+class _FakeSocket(socket.socket):
+    def __init__(self, response: bytes):
+        self._file = BytesIO(response)
+
+    def makefile(self, *args, **kwargs):
+        return self._file
+
+
 class HTTPResponse(http.client.HTTPResponse):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, response: bytes):
+        super().__init__(_FakeSocket(response))
         self.content = b""
+
+        self.begin()
+
+        if (length := self.getheader("Content-Length")) is not None:
+            self.content = self.read(int(length))
 
 
 class HTTPRequest(http.server.BaseHTTPRequestHandler):
@@ -100,28 +113,6 @@ class HTTPRequest(http.server.BaseHTTPRequestHandler):
         self.rfile.seek(0)
 
 
-def parse_response(response: bytes) -> HTTPResponse:
-    class FakeSocket:
-        def __init__(self, response_bytes):
-            self._file = BytesIO(response_bytes)
-
-        def makefile(self, *args, **kwargs):
-            return self._file
-
-    sock = FakeSocket(response)
-    parsed: HTTPResponse = HTTPResponse(sock)
-    parsed.begin()
-
-    if (length := parsed.getheader("Content-Length")) is not None:
-        parsed.content = parsed.read(int(length))
-
-    return parsed
-
-
-def parse_request(request: bytes) -> HTTPRequest:
-    return HTTPRequest(request)
-
-
 response = make_response(
     200,
     {
@@ -132,9 +123,9 @@ response = make_response(
     "testing",
 )
 
-response = make_request(HTTPMethod.CONNECT, body="hellow")
+request = make_request(HTTPMethod.CONNECT, body="hellow")
 
 
-parsed = parse_request(response)
+parsed = HTTPResponse(response)
 print(parsed.headers)
 print(parsed.content)

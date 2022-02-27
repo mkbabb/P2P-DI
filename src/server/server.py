@@ -3,15 +3,16 @@ import json
 import socket
 import sys
 import threading
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import *
 
-from src.utils.http import HTTPRequest, HTTPResponse, make_response
+from src.utils.http import HTTPRequest, HTTPResponse, http_response
 from src.utils.utils import recv_message, send_message
 
 PORT = 65243
 
 TTL = 7200
+TTL_INTERVAL = 1.0
 
 
 @dataclass
@@ -26,18 +27,46 @@ class Peer:
     ttl: int = TTL
 
 
+def load_peer(response: HTTPResponse):
+    data = json.loads(response.content.decode())
+    return Peer(**data)
+
+
+def load_peers(response: HTTPResponse):
+    data = json.loads(response.content.decode())
+    return [Peer(**peer_data) for peer_data in data]
+
+
+def dump_peer(peer: Peer):
+    return json.dumps(asdict(peer), default=str)
+
+
 PEER_ID = 0
 PEERS: dict[int, Peer] = {}
 
-SUCCESS_RESPONSE = make_response(status_code=200)
-FAIL_RESPONSE = make_response(status_code=403)
+
+def get_active_peers():
+    return {peer_id: peer for peer_id, peer in PEERS.items() if peer.active}
 
 
-def register(http_request: HTTPRequest):
+def decrement_peer_ttls():
+    for peer in get_active_peers().values():
+        if peer.ttl == 0:
+            peer.active = False
+        else:
+            peer.ttl -= 1
+
+
+SUCCESS_CODE = 200
+FAIL_CODE = 403
+
+
+@http_response
+def register(request: HTTPRequest):
     global PEER_ID
 
-    hostname = http_request.path
-    port = int(http_request.headers["Port"])
+    hostname = request.path
+    port = int(request.headers["Port"])
 
     peer = Peer(hostname=hostname, cookie=PEER_ID, port=port)
 
@@ -45,65 +74,87 @@ def register(http_request: HTTPRequest):
 
     PEER_ID += 1
 
-    return SUCCESS_RESPONSE
+    return SUCCESS_CODE, {}, dump_peer(peer)
 
 
-def leave(http_request: HTTPRequest):
-    peer_cookie = int(http_request.headers["Peer-Cookie"])
+@http_response
+def leave(request: HTTPRequest):
+    peer_cookie = int(request.headers["Peer-Cookie"])
     peer = PEERS.get(peer_cookie)
 
     if peer is None:
-        return FAIL_RESPONSE
+        return FAIL_CODE
 
     peer.active = False
     peer.ttl = 0
 
-    return SUCCESS_RESPONSE
+    return SUCCESS_CODE
 
 
-def p_query(http_request: HTTPRequest):
-    active_peers = {k: v for k, v in PEERS.items() if v.active}
-
-    return make_response(status_code=200, body=json.dumps(active_peers))
-
-
-def keep_alive(http_request: HTTPRequest):
-    peer_cookie = int(http_request.headers["Peer-Cookie"])
+def refresh_peer(peer_cookie: int):
     peer = PEERS.get(peer_cookie)
 
     if peer is None:
-        return FAIL_RESPONSE
+        return False
 
     peer.active = True
     peer.ttl = TTL
 
-    return SUCCESS_RESPONSE
+
+@http_response
+def p_query(request: HTTPRequest):
+    peer_cookie = int(request.headers["Peer-Cookie"])
+
+    if not refresh_peer(peer_cookie):
+        return FAIL_CODE
+
+    active_peers = {
+        peer_id: dump_peer(peer)
+        for peer_id, peer in get_active_peers()
+        if peer.cookie != peer_cookie
+    }
+
+    return SUCCESS_CODE, {}, json.dumps(active_peers)
+
+
+@http_response
+def keep_alive(request: HTTPRequest):
+    peer_cookie = int(request.headers["Peer-Cookie"])
+
+    if not refresh_peer(peer_cookie):
+        return FAIL_CODE
+    else:
+        return SUCCESS_CODE, {}, dump_peer(PEERS[peer_cookie])
+
+
+@http_response
+def fail():
+    return FAIL_CODE
 
 
 def server_receiver(peer_socket: socket.socket) -> None:
-    def handle(http_request: HTTPRequest) -> str:
-        match http_request.command:
-            case "Register":
-                return register(http_request)
-            case "Leave":
-                return leave(http_request)
-            case "KeepAlive":
-                return keep_alive
+    def handle(request: HTTPRequest) -> bytes:
+        match request.command.lower():
+            case "register":
+                return register(request)
+            case "leave":
+                return leave(request)
+            case "pquery":
+                return p_query(request)
+            case "keepalive":
+                return keep_alive(request)
             case _:
-                return FAIL_RESPONSE
+                return fail()
 
     try:
-        while request := recv_message(peer_socket):
-            http_request = HTTPRequest(request)
-
-            response = handle(http_request)
+        while request := HTTPRequest(recv_message(peer_socket)):
+            response = handle(request)
             send_message(response, peer_socket)
-
-    except KeyboardInterrupt:
+    except Exception as e:
         pass
-
-    peer_socket.close()
-    sys.exit(0)
+    finally:
+        peer_socket.close()
+        sys.exit(0)
 
 
 def server() -> None:
@@ -111,7 +162,10 @@ def server() -> None:
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(address)
-    server_socket.listen(32)
+    server_socket.listen(10)
+
+    decrementer = threading.Timer(TTL_INTERVAL, decrement_peer_ttls)
+    decrementer.start()
 
     try:
         while True:
@@ -120,6 +174,8 @@ def server() -> None:
             t.start()
     except KeyboardInterrupt:
         pass
+
+    decrementer.cancel()
 
 
 if __name__ == "__main__":

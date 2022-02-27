@@ -4,11 +4,42 @@ import http.client
 import http.server
 import platform
 import socket
-from enum import Enum, auto
+from functools import wraps
 from io import BytesIO
 from typing import *
 
+from src.utils.utils import recv_message, send_message
+
 HTTP_VERSION = "HTTP/1.1"
+
+
+class _FakeSocket(socket.socket):
+    def __init__(self, response: bytes):
+        self._file = BytesIO(response)
+
+    def makefile(self, *args, **kwargs):
+        return self._file
+
+
+class HTTPResponse(http.client.HTTPResponse):
+    def __init__(self, response: bytes):
+        super().__init__(_FakeSocket(response))
+        self.content = b""
+
+        self.begin()
+
+        if (length := self.getheader("Content-Length")) is not None:
+            self.content = self.read(int(length))
+
+
+class HTTPRequest(http.server.BaseHTTPRequestHandler):
+    def __init__(self, request: bytes):
+        self.rfile = BytesIO(request)
+        self.raw_requestline = self.rfile.readline()
+        self.error_code = self.error_message = None
+        self.parse_request()
+        self.content = self.rfile.read()
+        self.rfile.seek(0)
 
 
 def create_status_line(status_code: int = 200) -> bytes:
@@ -62,7 +93,7 @@ def make_request(
     url: str = "/",
     headers: Optional[dict[str, str]] = None,
     body: str = "",
-):
+) -> bytes:
     if headers is None:
         headers = {}
 
@@ -72,33 +103,44 @@ def make_request(
     return _make_response(start_line, headers, body)
 
 
-class _FakeSocket(socket.socket):
-    def __init__(self, response: bytes):
-        self._file = BytesIO(response)
-
-    def makefile(self, *args, **kwargs):
-        return self._file
-
-
-class HTTPResponse(http.client.HTTPResponse):
-    def __init__(self, response: bytes):
-        super().__init__(_FakeSocket(response))
-        self.content = b""
-
-        self.begin()
-
-        if (length := self.getheader("Content-Length")) is not None:
-            self.content = self.read(int(length))
+def send_recv_http_request(
+    request: bytes, server_socket: socket.socket
+) -> HTTPResponse:
+    send_message(request, server_socket)
+    response = recv_message(server_socket)
+    return HTTPResponse(response)
 
 
-class HTTPRequest(http.server.BaseHTTPRequestHandler):
-    def __init__(self, request: bytes):
-        self.rfile = BytesIO(request)
-        self.raw_requestline = self.rfile.readline()
-        self.error_code = self.error_message = None
-        self.parse_request()
-        self.content = self.rfile.read()
-        self.rfile.seek(0)
+HTTPRequestReturn = (
+    tuple[str] | tuple[str, str] | tuple[str, str, dict] | tuple[str, str, dict, str]
+)
+
+HTTPResponseReturn = tuple[int] | tuple[int, dict] | tuple[int, dict, str]
+
+
+def http_request(func: Callable[..., HTTPRequestReturn]):
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> HTTPResponse:
+        method, *rest = func(*args, **kwargs)
+        url: str = rest[0] if len(rest) > 0 else ""
+        headers: Optional[dict] = rest[1] if len(rest) > 1 else None
+        body: str = rest[2] if len(rest) > 2 else ""
+
+        return make_request(method=method, url=url, headers=headers, body=body)
+
+    return wrapper
+
+
+def http_response(func: Callable[..., HTTPResponseReturn]):
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> bytes:
+        status_code, *rest = func(*args, **kwargs)
+        headers: Optional[dict] = rest[0] if len(rest) > 0 else None
+        body: str = rest[1] if len(rest) > 1 else ""
+
+        return make_response(status_code=status_code, headers=headers, body=body)
+
+    return wrapper
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from src.utils.http import (
 )
 from src.utils.utils import recv_message, send_message
 
-TIMEOUT = 2
+TIMEOUT = 1.0
 
 
 class P2ServerCommands(Enum):
@@ -100,10 +100,10 @@ def server_receiver(peer_index: PeerIndex, peer_socket: socket.socket) -> None:
     try:
         while message := recv_message(peer_socket):
             request = HTTPRequest(message)
-            response = handle(request)
-            send_message(response, peer_socket)
+            if (response := handle(request)) is not None:
+                send_message(response, peer_socket)
     except Exception as e:
-        print("Server: ", e)
+        print("Server: ", e, file=sys.stderr)
     finally:
         peer_socket.close()
         sys.exit(0)
@@ -118,30 +118,24 @@ def server() -> None:
 
     peer_index = PeerIndex()
 
-    # decrement_peer_thread = threading.Timer(
-    #     TTL_INTERVAL, peer_index.decrement_peer_ttls
-    # )
-    # decrement_peer_thread.start()
-
-    
+    decrement_peer_thread = threading.Timer(
+        TTL_INTERVAL, peer_index.decrement_peer_ttls
+    )
+    decrement_peer_thread.start()
 
     try:
         while True:
-            print("start")
             conn, _ = server_socket.accept()
             t = threading.Thread(
                 target=server_receiver,
                 args=(peer_index, conn),
             )
             t.start()
-            print("stop")
 
     except KeyboardInterrupt:
         pass
 
-    
-
-    # decrement_peer_thread.cancel()
+    decrement_peer_thread.cancel()
 
 
 if __name__ == "__main__":

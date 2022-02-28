@@ -1,6 +1,7 @@
 import pathlib
 import pprint
 import socket
+import sys
 from typing import *
 import time
 
@@ -12,6 +13,7 @@ from src.utils.http import (
     FAIL_RESPONSE,
     SUCCESS_CODE,
     SUCCESS_RESPONSE,
+    HTTPResponse,
     http_request,
     make_request,
     send_recv_http_request,
@@ -56,13 +58,14 @@ def get_rfc(hostname: str, rfc_number: int, peer_socket: socket.socket):
 
         rfc: RFC = load_rfc(response)
         filepath = pathlib.Path(rfc.path)
-        out_filepath = pathlib.Path(filepath.name)
+        out_filepath = pathlib.Path("out/").joinpath(pathlib.Path(filepath.name))
+
+        response = HTTPResponse(recv_message(peer_socket))
 
         with out_filepath.open("wb") as file:
-            file.write(recv_message(peer_socket))
+            file.write(response.content)
 
         return SUCCESS_RESPONSE()
-
     else:
         return FAIL_RESPONSE()
 
@@ -101,10 +104,10 @@ def client_handler(
         match command:
             case P2ServerCommands.register | P2ServerCommands.keepalive:
                 me = load_peer(response)
-                # pprint.pprint(me)
+                pprint.pprint(me)
             case P2ServerCommands.pquery:
                 active_peers = load_peers(response)
-                # pprint.pprint(active_peers)
+                pprint.pprint(active_peers)
 
         return response
 
@@ -133,7 +136,6 @@ def client_handler(
             return response
 
     def execute_command(command: P2ServerCommands | P2PCommands, args: dict = None):
-        print(command)
         match command:
             case (
                 P2ServerCommands.register
@@ -170,4 +172,4 @@ def client(hostname: str, port: int, commands: list[tuple[str, dict]] = None):
                 server_socket=server_socket,
             )
     except Exception as e:
-        print("Client: ", e)
+        print("Client: ", e, file=sys.stderr)

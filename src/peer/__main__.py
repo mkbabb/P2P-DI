@@ -1,4 +1,5 @@
 import pathlib
+import random
 import socket
 import threading
 import time
@@ -8,87 +9,129 @@ from src.peer.rfc import RFC
 from src.peer.server import P2PCommands, server
 from src.server.server import P2ServerCommands
 
+RFC_TOTAL = 500
+HOSTNAME = socket.gethostname()
+START_PORT = 1234
+BASE_DIR = pathlib.Path("data/")
+
 
 def create_peer(
     hostname: str,
     port: int,
-    event: threading.Event(),
     commands: list[tuple[str, dict]] = None,
     rfc_index: set[RFC] = None,
 ) -> tuple[threading.Thread, ...]:
     server_thread = threading.Thread(
-        target=server, args=(hostname, port, event, rfc_index), daemon=True
+        target=server, args=(hostname, port, rfc_index), daemon=True
     )
-    server_thread.start()
-
-    client_thread = threading.Thread(
-        target=client, args=(hostname, port, commands), daemon=True
-    )
-    client_thread.start()
+    client_thread = threading.Thread(target=client, args=(hostname, port, commands))
 
     return server_thread, client_thread
 
 
-def task_1():
-    hostname = socket.gethostname()
-    start_port = 1234
-    base_dir = pathlib.Path("data/")
-
-    threads: list[threading.Thread] = []
-    event = threading.Event()
-
-    clients = 2
-    rfc_count = 50
-
-    rfc_index = set(
-        [
-            RFC(i, f"rfc{i}", hostname, base_dir.joinpath(f"rfc{i}.txt"))
-            for i in range(rfc_count)
-        ]
+def make_get_rfc(hostname: str, port: int, rfc_number: int):
+    return (
+        P2PCommands.getrfc,
+        {"hostname": hostname, "port": port, "rfc_number": rfc_number},
     )
+
+
+def make_rfc_index(
+    hostname: str, base_dir: pathlib.Path, count: int, randomize: bool = True
+):
+    numbers = (
+        list(range(1, count + 1))
+        if not randomize
+        else random.sample(range(1, RFC_TOTAL + 1), count)
+    )
+
+    return set(
+        [RFC(i, f"rfc{i}", hostname, base_dir.joinpath(f"rfc{i}.txt")) for i in numbers]
+    )
+
+
+def task_1():
+    threads: list[threading.Thread] = []
+
+    clients = 6
+    rfc_count = 60
+
+    rfc_index = make_rfc_index(HOSTNAME, BASE_DIR, rfc_count, False)
+
     p0 = create_peer(
-        hostname=hostname,
-        port=start_port,
-        event=event,
+        hostname=HOSTNAME,
+        port=START_PORT,
         commands=None,
         rfc_index=rfc_index,
     )
-    threads.append(p0[1])
+    threads.append(p0)
 
     commands = [
         (P2ServerCommands.pquery, {}),
-        (P2PCommands.rfcquery, {"hostname": hostname, "port": start_port}),
-        (
-            P2PCommands.getrfc,
-            {"hostname": hostname, "port": start_port, "rfc_number": 1},
-        ),
-        (
-            P2PCommands.getrfc,
-            {"hostname": hostname, "port": start_port, "rfc_number": 2},
-        ),
-        (
-            P2PCommands.getrfc,
-            {"hostname": hostname, "port": start_port, "rfc_number": 3},
-        ),
-        (
-            P2PCommands.getrfc,
-            {"hostname": hostname, "port": start_port, "rfc_number": 4},
-        ),
+        (P2PCommands.rfcquery, {"hostname": HOSTNAME, "port": START_PORT}),
     ]
+
+    commands.extend(
+        (make_get_rfc(HOSTNAME, START_PORT, i) for i in range(1, rfc_count - 10 + 1))
+    )
 
     for i in range(1, clients):
         p_i = create_peer(
-            hostname=hostname,
-            port=start_port + i,
-            event=event,
+            hostname=HOSTNAME,
+            port=START_PORT + i,
             commands=commands,
             rfc_index=None,
         )
-        threads.append(p_i[1])
+        threads.append(p_i)
 
-    # for t in threads:
-    #     t.join()
+    for server_thread, client_thread in threads:
+        server_thread.start()
+        client_thread.start()
+
+
+def task_2():
+    threads: list[threading.Thread] = []
+
+    clients = 6
+    rfc_count = 10
+
+    rfc_indexes = {
+        i: make_rfc_index(HOSTNAME, BASE_DIR, rfc_count) for i in range(clients)
+    }
+
+    commands = [
+        (P2ServerCommands.pquery, {}),
+        (P2PCommands.rfcquery, {"hostname": HOSTNAME, "port": START_PORT}),
+    ]
+
+    for i in range(clients):
+        rfc_index_i = rfc_indexes[i]
+
+        get_commands = []
+        for key, value in rfc_indexes.items():
+            if key != i:
+                get_commands.extend(
+                    [
+                        make_get_rfc(HOSTNAME, START_PORT + key, rfc.number)
+                        for rfc in value
+                    ]
+                )
+
+        p_i = create_peer(
+            hostname=HOSTNAME,
+            port=START_PORT + i,
+            commands=[*commands, *get_commands],
+            rfc_index=rfc_index_i,
+        )
+        server_thread, _ = p_i
+        server_thread.start()
+
+        threads.append(p_i)
+
+    for server_thread, client_thread in threads:
+        client_thread.start()
 
 
 if __name__ == "__main__":
-    task_1()
+    # task_1()
+    task_2()

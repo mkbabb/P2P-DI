@@ -75,19 +75,22 @@ def format_headers(headers: dict[str, str]) -> bytes:
 
 
 def _make_response(
-    start_line: bytes, headers: Optional[dict[str, str]] = None, body: str = ""
+    start_line: bytes, headers: Optional[dict[str, str]] = None, body: str | bytes = ""
 ) -> bytes:
     if headers is None:
         headers = {}
 
+    if not isinstance(body, bytes):
+        body = body.encode()
+
     if len(body) > 0:
         headers["Content-Length"] = str(len(body))
-        body = "\r\n" + body
+        body = b"\r\n" + body
 
     content = [
         start_line,
         format_headers(headers),
-        body.encode(),
+        body,
     ]
 
     response = b"\r\n".join(content)
@@ -98,7 +101,7 @@ def _make_response(
 def make_response(
     status_code: int = 200,
     headers: Optional[dict[str, str]] = None,
-    body: str = "",
+    body: str | bytes = "",
 ) -> bytes:
     start_line = create_status_line(status_code)
     return _make_response(start_line, headers, body)
@@ -108,7 +111,7 @@ def make_request(
     method: str,
     url: str = "/",
     headers: Optional[dict[str, str]] = None,
-    body: str = "",
+    body: str | bytes = "",
 ) -> bytes:
     if headers is None:
         headers = {}

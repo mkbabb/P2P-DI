@@ -10,14 +10,11 @@ from src.server.server import TIMEOUT
 from src.utils.http import (
     FAIL_RESPONSE,
     SUCCESS_CODE,
-    SUCCESS_RESPONSE,
     HTTPRequest,
-    HTTPResponse,
     http_response,
     make_response,
-    send_recv_http_request,
 )
-from src.utils.utils import CHUNK_SIZE, recv_message, send_message
+from src.utils.utils import recv_message, send_message
 
 
 class P2PCommands(Enum):
@@ -33,7 +30,7 @@ def rfc_query(request: HTTPRequest, rfc_index: set[RFC]):
 
 def get_rfc(
     request: HTTPRequest, rfc_index: set[RFC], peer_socket: socket.socket
-) -> bytes:
+) -> Optional[bytes]:
     rfc_number = int(request.headers["RFC-Number"])
     rfcs = [i for i in rfc_index if i.number == rfc_number]
 
@@ -48,14 +45,9 @@ def get_rfc(
 
     response = make_response(SUCCESS_CODE, body=dump_rfc(rfc))
     send_message(response, peer_socket)
-    
-    send_message(filepath.open("rb").read(), peer_socket)
 
-    # with filepath.open("rb") as file:
-    #     while d := file.read(CHUNK_SIZE):
-    #         send_message(d, peer_socket)
-
-    return SUCCESS_RESPONSE()
+    with filepath.open("rb") as file:
+        return make_response(SUCCESS_CODE, body=file.read())
 
 
 def server_receiver(rfc_index: set[RFC], peer_socket: socket.socket) -> None:
@@ -77,10 +69,11 @@ def server_receiver(rfc_index: set[RFC], peer_socket: socket.socket) -> None:
     try:
         while message := recv_message(peer_socket):
             request = HTTPRequest(message)
-            response = handle(request)
-            send_message(response, peer_socket)
+            if (response := handle(request)) is not None:
+                send_message(response, peer_socket)
+
     except Exception as e:
-        print("Peer: ", e)
+        print("Peer: ", e, file=sys.stderr)
     finally:
         peer_socket.close()
         sys.exit(0)
@@ -89,7 +82,6 @@ def server_receiver(rfc_index: set[RFC], peer_socket: socket.socket) -> None:
 def server(
     hostname: str,
     port: str,
-    event: threading.Event,
     rfc_index: set[RFC] = None,
 ) -> None:
     address = (hostname, port)
@@ -103,7 +95,7 @@ def server(
         rfc_index: set[RFC] = set()
 
     try:
-        while not event.is_set():
+        while True:
             conn, _ = server_socket.accept()
             t = threading.Thread(
                 target=server_receiver,

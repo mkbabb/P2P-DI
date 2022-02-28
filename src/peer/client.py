@@ -13,8 +13,8 @@ peer_app = BottleApp()
 
 
 @app.request()
-def register():
-    return "Register", {"port": app.port}
+def register(port: int):
+    return "Register", {"port": port}
 
 
 @app.request()
@@ -42,14 +42,14 @@ def get_rfc(peer: Peer):
     pass
 
 
-def client_handler(commands: list[tuple[str, list]]) -> None:
+def client_handler(port: int, commands: list[tuple[str, list]]) -> None:
     def peer_to_server(command: str, args: dict):
         global me
 
         response = None
         match command:
             case "register":
-                response = register()
+                response = register(port=port)
             case "leave":
                 response = leave(peer=me)
             case "pquery":
@@ -93,24 +93,25 @@ def client_handler(commands: list[tuple[str, list]]) -> None:
 
     def make_request(command: str, args: dict = None):
         lock.acquire()
-        
+
         response = peer_to_server(command, args) or peer_to_peer(command, args)
-        
+
         lock.release()
-        
+
         return response
 
     make_request("register")
-    keep = threading.Timer(TTL_INTERVAL, make_request, ("keepalive",))
-    keep.start()
+    keep_alive_thread = threading.Timer(TTL_INTERVAL, make_request, ("keepalive",))
+    keep_alive_thread.start()
 
-    for (command, args) in commands:
-        make_request(command, args)
+    if commands is not None:
+        for (command, args) in commands:
+            make_request(command, args)
 
-    # keep.cancel()
+    keep_alive_thread.cancel()
 
 
-def client(hostname: str, port: int, commands: list[str]):
+def client(hostname: str, port: int, commands: list[tuple[str, dict]] = None):
     server_address = (hostname, PORT)
 
     app.connect(hostname, PORT)
@@ -118,6 +119,7 @@ def client(hostname: str, port: int, commands: list[str]):
     print(f"Connected to server: {server_address}")
 
     client_handler(
+        port=port,
         commands=commands,
     )
 

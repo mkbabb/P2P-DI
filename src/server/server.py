@@ -6,16 +6,20 @@ import threading
 from dataclasses import asdict, dataclass, field
 from typing import *
 
-from src.utils.http import HTTPRequest, HTTPResponse, http_response
+from src.utils.http import (
+    FAIL_CODE,
+    FAIL_RESPONSE,
+    SUCCESS_CODE,
+    HTTPRequest,
+    HTTPResponse,
+    http_response,
+)
 from src.utils.utils import recv_message, send_message
 
 PORT = 65243
 
 TTL = 7200
 TTL_INTERVAL = 1.0
-
-SUCCESS_CODE = 200
-FAIL_CODE = 403
 
 
 @dataclass
@@ -73,11 +77,16 @@ def register(request: HTTPRequest):
     hostname = request.path
     port = int(request.headers["Port"])
 
-    peer = Peer(hostname=hostname, cookie=PEER_ID, port=port)
+    peer = None
 
-    PEERS[PEER_ID] = peer
-
-    PEER_ID += 1
+    for p in PEERS.values():
+        if p.hostname == hostname and p.port == port:
+            peer = p
+            break
+    else:
+        peer = Peer(hostname=hostname, cookie=PEER_ID, port=port)
+        PEERS[PEER_ID] = peer
+        PEER_ID += 1
 
     return SUCCESS_CODE, {}, dump_peer(peer)
 
@@ -135,11 +144,6 @@ def keep_alive(request: HTTPRequest):
         return SUCCESS_CODE, {}, dump_peer(PEERS[peer_cookie])
 
 
-@http_response
-def fail():
-    return FAIL_CODE
-
-
 def server_receiver(peer_socket: socket.socket) -> None:
     def handle(request: HTTPRequest) -> bytes:
         match request.command.lower():
@@ -152,7 +156,7 @@ def server_receiver(peer_socket: socket.socket) -> None:
             case "keepalive":
                 return keep_alive(request)
             case _:
-                return fail()
+                return FAIL_RESPONSE()
 
     try:
         while request := HTTPRequest(recv_message(peer_socket)):
@@ -173,8 +177,8 @@ def server() -> None:
     server_socket.bind(address)
     server_socket.listen(10)
 
-    decrementer = threading.Timer(TTL_INTERVAL, decrement_peer_ttls)
-    decrementer.start()
+    decrement_peer_thread = threading.Timer(TTL_INTERVAL, decrement_peer_ttls)
+    decrement_peer_thread.start()
 
     try:
         while True:
@@ -184,7 +188,7 @@ def server() -> None:
     except KeyboardInterrupt:
         pass
 
-    decrementer.cancel()
+    decrement_peer_thread.cancel()
 
 
 if __name__ == "__main__":

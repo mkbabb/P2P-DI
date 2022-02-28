@@ -12,6 +12,9 @@ from src.utils.utils import recv_message, send_message
 
 HTTP_VERSION = "HTTP/1.1"
 
+SUCCESS_CODE = 200
+FAIL_CODE = 403
+
 
 class _FakeSocket(socket.socket):
     def __init__(self, response: bytes):
@@ -124,7 +127,7 @@ class BottleApp:
         self.port = None
         self.socket = None
 
-    def request(self, url: str = "/"):
+    def request(self, url: str = ""):
         return http_request(self, url)
 
     def connect(self, hostname: str, port: int):
@@ -139,7 +142,7 @@ class BottleApp:
         return None
 
 
-def http_request(app: BottleApp, url: str = "/"):
+def http_request(app: BottleApp, url: str = ""):
     def inner(func: Callable[..., HTTPRequestReturn]):
         @wraps(func)
         def wrapper(*args, **kwargs) -> HTTPResponse:
@@ -167,6 +170,11 @@ def http_response(func: Callable[..., HTTPResponseReturn]):
         return make_response(status_code=status_code, headers=headers, body=body)
 
     return wrapper
+
+
+@http_response
+def FAIL_RESPONSE():
+    return FAIL_CODE
 
 
 if __name__ == "__main__":

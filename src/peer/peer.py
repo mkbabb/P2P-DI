@@ -1,9 +1,7 @@
 import threading
 
-from src.peer.client import peer_client
-from src.peer.server import peer_server
-
-
+from src.peer.client import client
+from src.peer.server import server
 
 
 def main() -> None:
@@ -12,16 +10,16 @@ def main() -> None:
 
     address = (hostname, port)
 
-    peer_client_thread = threading.Thread(target=peer_client, args=address)
-    peer_client_thread.setDaemon(True)
-    peer_client_thread.start()
+    client_thread = threading.Thread(target=client, args=address)
+    client_thread.setDaemon(True)
+    client_thread.start()
 
-    # connect_server_thread = threading.Thread(target=peer_server, args=address)
-    # connect_server_thread.setDaemon(True)
-    # connect_server_thread.start()
+    server_thread = threading.Thread(target=server, args=address)
+    server_thread.setDaemon(True)
+    server_thread.start()
 
-    # connect_server_thread.join()
-    peer_client_thread.join()
+    server_thread.join()
+    client_thread.join()
 
 
 if __name__ == "__main__":

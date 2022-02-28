@@ -1,129 +1,132 @@
-import pathlib
 import socket
 import threading
+
 from typing import *
 
-from src.server.server import PORT, TTL_INTERVAL, Peer, load_peer
-from src.utils.http import HTTPResponse, http_request, send_recv_http_request
+from src.server.server import PORT, TTL_INTERVAL, Peer, load_peer, load_peers
+from src.utils.http import BottleApp, HTTPResponse
 
 me: Peer = None
 
-server_socket: socket.socket = None
-peer_socket: socket.socket = None
+app = BottleApp()
+peer_app = BottleApp()
 
 
-@http_request
-def register(hostname: str, port: int):
-    return "Register", hostname, {"port": port}
+@app.request()
+def register():
+    return "Register", {"port": app.port}
 
 
-@http_request
-def leave(hostname: str, peer: Peer):
-    return "Leave", hostname, {"Peer-Cookie": peer.cookie}
+@app.request()
+def leave(peer: Peer):
+    return "Leave", {"Peer-Cookie": peer.cookie}
 
 
-@http_request
-def p_query(hostname: str, peer: Peer):
-    return "Leave", hostname, {"Peer-Cookie": peer.cookie}
+@app.request()
+def p_query(peer: Peer):
+    return "PQuery", {"Peer-Cookie": peer.cookie}
 
 
-@http_request
-def keep_alive(hostname: str, peer: Peer):
-    return "KeepAlive", hostname, {"Peer-Cookie": peer.cookie}
+@app.request()
+def keep_alive(peer: Peer):
+    return "KeepAlive", {"Peer-Cookie": peer.cookie}
 
 
-@http_request
+@peer_app.request()
 def rfc_query(peer: Peer):
-    pass
+    return "RFCQuery"
 
 
-@http_request
+@peer_app.request()
 def get_rfc(peer: Peer):
     pass
 
 
-def client_handler(hostname: str, port: int, commands: list[str]) -> None:
-    def parse_response(command: str, response: HTTPResponse):
+def client_handler(commands: list[tuple[str, list]]) -> None:
+    def peer_to_server(command: str, args: dict):
         global me
 
-        match command.lower():
+        response = None
+        match command:
+            case "register":
+                response = register()
+            case "leave":
+                response = leave(peer=me)
+            case "pquery":
+                response = p_query(peer=me)
+            case "keepalive":
+                response = keep_alive(peer=me)
+            case _:
+                return None
+
+        if response.status != 200:
+            return None
+
+        match command:
             case "register" | "keepalive":
                 me = load_peer(response)
             case "pquery":
-                pass
+                active_peers = load_peers(response)
+                print(active_peers)
 
-    def peer_to_server(command: str):
-        request = None
-        match command.lower():
-            case "register":
-                request = register(hostname=hostname, port=port)
-            case "leave":
-                request = leave(hostname=hostname, peer=me)
-            case "pquery":
-                request = p_query(hostname=hostname, peer=me)
-            case "keepalive":
-                request = keep_alive(hostname=hostname, peer=me)
+        return response
 
-        return send_recv_http_request(request=request, server_socket=server_socket)
+    def peer_to_peer(command: str, args: dict):
+        response = None
+        match command:
+            case "rfcquery" | "getrfc":
+                peer_app.connect(args["hostname"], args["port"])
+            case _:
+                return
 
-    def peer_to_peer(command: str):
         match command:
             case "rfcquery":
-                response = rfc_query(hostname=hostname)
+                response = rfc_query()
             case "getrfc":
-                pass
+                response = get_rfc()
 
-    def make_request(command: str):
-        response = None
+        peer_app.disconnect()
 
-        match command.lower():
-            case "register":
-                response = register(hostname=hostname, port=port)
-            case "leave":
-                response = leave(hostname=hostname, peer=me)
-            case "pquery":
-                response = p_query(hostname=hostname, peer=me)
-            case "keepalive":
-                response = keep_alive(hostname=hostname, peer=me)
+        return response
 
-            case "rfcquery":
-                response = rfc_query(hostname=hostname)
-            case "getrfc":
-                pass
+    lock = threading.Lock()
 
-        match response.status:
-            case 200:
-                parse_response(command=command, response=response)
+    def make_request(command: str, args: dict = None):
+        lock.acquire()
+        
+        response = peer_to_server(command, args) or peer_to_peer(command, args)
+        
+        lock.release()
+        
+        return response
 
     make_request("register")
     keep = threading.Timer(TTL_INTERVAL, make_request, ("keepalive",))
     keep.start()
 
-    for command in commands:
-        make_request(command)
+    for (command, args) in commands:
+        make_request(command, args)
 
-    keep.cancel()
+    # keep.cancel()
 
 
 def client(hostname: str, port: int, commands: list[str]):
-    global server_socket
-
     server_address = (hostname, PORT)
 
-    with socket.create_connection(server_address) as sock:
-        server_socket = sock
-        print(f"Connected to server: {server_address}")
+    app.connect(hostname, PORT)
 
-        client_handler(
-            hostname=hostname,
-            port=port,
-            commands=commands,
-        )
+    print(f"Connected to server: {server_address}")
+
+    client_handler(
+        commands=commands,
+    )
+
+    app.disconnect()
 
 
 if __name__ == "__main__":
     hostname = socket.gethostname()
-    port = 1234
-    commands = ["pquery"]
+    port = 1235
+    commands = [("pquery", {}), ("rfcquery", {"hostname": hostname, "port": port})]
 
     client(hostname, port, commands)

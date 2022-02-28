@@ -14,6 +14,9 @@ PORT = 65243
 TTL = 7200
 TTL_INTERVAL = 1.0
 
+SUCCESS_CODE = 200
+FAIL_CODE = 403
+
 
 @dataclass
 class Peer:
@@ -26,6 +29,16 @@ class Peer:
     active: bool = True
     ttl: int = TTL
 
+    def __post_init__(self):
+        if isinstance(self.last_active_time, str):
+            self.last_active_time = datetime.datetime.fromisoformat(
+                self.last_active_time
+            )
+
+
+PEER_ID = 0
+PEERS: dict[int, Peer] = {}
+
 
 def load_peer(response: HTTPResponse):
     data = json.loads(response.content.decode())
@@ -33,16 +46,12 @@ def load_peer(response: HTTPResponse):
 
 
 def load_peers(response: HTTPResponse):
-    data = json.loads(response.content.decode())
+    data = [json.loads(i) for i in json.loads(response.content)]
     return [Peer(**peer_data) for peer_data in data]
 
 
 def dump_peer(peer: Peer):
     return json.dumps(asdict(peer), default=str)
-
-
-PEER_ID = 0
-PEERS: dict[int, Peer] = {}
 
 
 def get_active_peers():
@@ -55,10 +64,6 @@ def decrement_peer_ttls():
             peer.active = False
         else:
             peer.ttl -= 1
-
-
-SUCCESS_CODE = 200
-FAIL_CODE = 403
 
 
 @http_response
@@ -100,6 +105,8 @@ def refresh_peer(peer_cookie: int):
     peer.active = True
     peer.ttl = TTL
 
+    return True
+
 
 @http_response
 def p_query(request: HTTPRequest):
@@ -108,13 +115,14 @@ def p_query(request: HTTPRequest):
     if not refresh_peer(peer_cookie):
         return FAIL_CODE
 
-    active_peers = {
-        peer_id: dump_peer(peer)
-        for peer_id, peer in get_active_peers()
+    active_peers = [
+        dump_peer(peer)
+        for peer in get_active_peers().values()
         if peer.cookie != peer_cookie
-    }
+    ]
+    body = json.dumps(active_peers)
 
-    return SUCCESS_CODE, {}, json.dumps(active_peers)
+    return SUCCESS_CODE, {}, body
 
 
 @http_response
@@ -151,6 +159,7 @@ def server_receiver(peer_socket: socket.socket) -> None:
             response = handle(request)
             send_message(response, peer_socket)
     except Exception as e:
+        print(e)
         pass
     finally:
         peer_socket.close()

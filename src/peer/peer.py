@@ -6,7 +6,7 @@ from typing import *
 from src.utils.http import HTTPRequest, HTTPResponse
 
 TTL = 7200
-TTL_INTERVAL = 1.0
+TTL_INTERVAL = 5.0
 
 
 @dataclass

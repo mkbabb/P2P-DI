@@ -4,7 +4,7 @@ import sys
 import threading
 from typing import *
 
-from src.peer import TTL_INTERVAL, PeerIndex, dump_peer
+from src.peer.peer import TTL_INTERVAL, PeerIndex, dump_peer
 from src.utils.http import (
     FAIL_CODE,
     FAIL_RESPONSE,

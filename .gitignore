@@ -4,4 +4,3 @@
 .env
 auth/
 __pycache__/
-_*

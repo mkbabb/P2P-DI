@@ -92,32 +92,3 @@ def server(hostname: str, port: str, rfc_index: set[RFC] = None) -> None:
             t.start()
     except KeyboardInterrupt:
         pass
-
-
-if __name__ == "__main__":
-    hostname = socket.gethostname()
-    start_port = 1234
-    base_dir = pathlib.Path("data/")
-
-    clients = 2
-    rfc_count = 10
-
-    rfc_number = 1
-
-    for i in range(clients):
-        rfc_index = set()
-        port = start_port + i
-
-        for _ in range(rfc_count):
-            title = f"rfc{rfc_number}"
-            path = base_dir.joinpath(f"{title}.txt")
-            rfc = RFC(rfc_number, f"rfc{rfc_number}", hostname, path)
-
-            rfc_index.add(rfc)
-            rfc_number += 1
-
-        t = threading.Thread(
-            target=server,
-            args=(hostname, port, rfc_index),
-        )
-        t.start()

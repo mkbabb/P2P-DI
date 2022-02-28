@@ -157,6 +157,10 @@ def http_request(app: BottleApp, url: str = ""):
             request = make_request(
                 method=method, url=f"{app.hostname}{url}", headers=headers, body=body
             )
+
+            # r = HTTPRequest(bytes(request))
+            # print(repr(r))
+
             return send_recv_http_request(request=request, server_socket=app.socket)
 
         return wrapper
@@ -171,7 +175,12 @@ def http_response(func: Callable[..., HTTPResponseReturn]):
         headers: Optional[dict] = rest[0] if len(rest) > 0 else None
         body: str = rest[1] if len(rest) > 1 else ""
 
-        return make_response(status_code=status_code, headers=headers, body=body)
+        response = make_response(status_code=status_code, headers=headers, body=body)
+
+        # r = HTTPResponse(bytes(response))
+        # print(repr(r))
+
+        return response
 
     return wrapper
 

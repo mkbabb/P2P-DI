@@ -1,5 +1,4 @@
 import pathlib
-import socket
 from typing import *
 
 from src.peer.peer import Peer, load_peer, load_peers
@@ -12,8 +11,6 @@ me: Peer = None
 
 app = BottleApp()
 peer_app = BottleApp()
-
-RFC_INDEX: set[RFC] = {}
 
 
 @app.request()
@@ -65,7 +62,9 @@ def get_rfc(rfc_number: int):
         return FAIL_RESPONSE()
 
 
-def client_handler(port: int, commands: list[tuple[str, list]]) -> None:
+def client_handler(hostname: str, port: int, commands: list[tuple[str, list]]) -> None:
+    rfc_index: set[RFC] = {}
+
     def peer_to_server(command: str, args: dict):
         global me
 
@@ -114,7 +113,7 @@ def client_handler(port: int, commands: list[tuple[str, list]]) -> None:
         match command:
             case "rfcquery":
                 rfcs = load_rfc_index(response)
-                RFC_INDEX |= rfcs
+                rfc_index.add(*rfcs)
 
         peer_app.disconnect()
 
@@ -125,6 +124,7 @@ def client_handler(port: int, commands: list[tuple[str, list]]) -> None:
         return response
 
     make_request("register")
+    make_request("rfcquery", {"hostname": hostname, "port": port})
 
     if commands is not None:
         for (command, args) in commands:
@@ -139,16 +139,9 @@ def client(hostname: str, port: int, commands: list[tuple[str, dict]] = None):
     print(f"Connected to server: {server_address}")
 
     client_handler(
+        hostname=hostname,
         port=port,
         commands=commands,
     )
 
     app.disconnect()
-
-
-if __name__ == "__main__":
-    hostname = socket.gethostname()
-    port = 9999
-    commands = [("pquery", {}), ("rfcquery", {"hostname": hostname, "port": 1234})]
-
-    client(hostname, port, commands)

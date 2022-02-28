@@ -1,68 +1,31 @@
-import json
-import os
 import pathlib
 import socket
-from sre_constants import SUCCESS
 import sys
 import threading
-import time
-from dataclasses import asdict, dataclass
 from typing import *
 
-from src.server.server import Peer
+from src.peer.rfc import RFC, dump_rfc, dump_rfc_index
 from src.utils.http import (
-    FAIL_CODE,
     FAIL_RESPONSE,
     SUCCESS_CODE,
     SUCCESS_RESPONSE,
-    TIME_FMT,
     HTTPRequest,
-    HTTPResponse,
     http_response,
-    make_request,
     make_response,
-    send_recv_http_request,
 )
 from src.utils.utils import CHUNK_SIZE, recv_message, send_message
 
 
-@dataclass
-class RFC:
-    number: int
-    title: str
-    hostname: Peer
-    path: pathlib.Path
-
-
-RFC_INDEX: set[RFC] = {}
-
-
-def load_rfc(response: HTTPResponse | HTTPRequest):
-    data = json.loads(response.content.decode())
-    return RFC(**data)
-
-
-def dump_rfc(rfc: RFC):
-    return json.dumps(asdict(rfc))
-
-
-def load_rfc_index(response: HTTPResponse | HTTPRequest):
-    data = json.loads(response.content.decode())
-    return [RFC(**i) for i in data]
-
-
-def dump_rfc_index(rfc_index: list[RFC]):
-    return json.dumps([asdict(i) for i in rfc_index], default=str)
-
-
 @http_response
-def rfc_query(request: HTTPRequest):
-    return SUCCESS_CODE, {}, dump_rfc_index(RFC_INDEX)
+def rfc_query(request: HTTPRequest, rfc_index: set[RFC]):
+    return SUCCESS_CODE, {}, dump_rfc_index(rfc_index)
 
 
-def get_rfc(request: HTTPRequest, peer_socket: socket.socket) -> None:
+def get_rfc(
+    request: HTTPRequest, rfc_index: set[RFC], peer_socket: socket.socket
+) -> None:
     rfc_number = int(request.headers["RFC-Number"])
-    rfcs = [i for i in RFC_INDEX if i.number == rfc_number]
+    rfcs = [i for i in rfc_index if i.number == rfc_number]
 
     if len(rfcs) == 0:
         return FAIL_RESPONSE()
@@ -83,13 +46,17 @@ def get_rfc(request: HTTPRequest, peer_socket: socket.socket) -> None:
     return SUCCESS_RESPONSE()
 
 
-def server_receiver(peer_socket: socket.socket) -> None:
+def server_receiver(rfc_index: set[RFC], peer_socket: socket.socket) -> None:
     def handle(request: HTTPRequest) -> bytes:
         match request.command.lower():
             case "rfcquery":
-                return rfc_query(request)
+                return rfc_query(request, rfc_index)
             case "getrfc":
-                return get_rfc(request)
+                return get_rfc(
+                    request,
+                    rfc_index,
+                    peer_socket,
+                )
             case _:
                 return FAIL_RESPONSE()
 
@@ -105,21 +72,52 @@ def server_receiver(peer_socket: socket.socket) -> None:
         sys.exit(0)
 
 
-def server(hostname: str, port: str) -> None:
+def server(hostname: str, port: str, rfc_index: set[RFC] = None) -> None:
     address = (hostname, port)
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(address)
     server_socket.listen(10)
 
+    if rfc_index is None:
+        rfc_index: set[RFC] = set()
+
     try:
         while True:
             conn, _ = server_socket.accept()
-            t = threading.Thread(target=server_receiver, args=(conn,))
+            t = threading.Thread(
+                target=server_receiver,
+                args=(rfc_index, conn),
+            )
             t.start()
     except KeyboardInterrupt:
         pass
 
 
 if __name__ == "__main__":
-    server()
+    hostname = socket.gethostname()
+    start_port = 1234
+    base_dir = pathlib.Path("data/")
+
+    clients = 2
+    rfc_count = 10
+
+    rfc_number = 1
+
+    for i in range(clients):
+        rfc_index = set()
+        port = start_port + i
+
+        for _ in range(rfc_count):
+            title = f"rfc{rfc_number}"
+            path = base_dir.joinpath(f"{title}.txt")
+            rfc = RFC(rfc_number, f"rfc{rfc_number}", hostname, path)
+
+            rfc_index.add(rfc)
+            rfc_number += 1
+
+        t = threading.Thread(
+            target=server,
+            args=(hostname, port, rfc_index),
+        )
+        t.start()

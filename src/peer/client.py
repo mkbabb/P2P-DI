@@ -1,17 +1,11 @@
 import pathlib
 import socket
-import threading
-
 from typing import *
-from src.peer.server import RFC, load_rfc, load_rfc_index
 
-from src.server.server import PORT, TTL_INTERVAL, Peer, load_peer, load_peers
-from src.utils.http import (
-    FAIL_RESPONSE,
-    SUCCESS_CODE,
-    SUCCESS_RESPONSE,
-    BottleApp,
-)
+from src.peer.peer import Peer, load_peer, load_peers
+from src.peer.rfc import RFC, load_rfc, load_rfc_index
+from src.server.server import PORT
+from src.utils.http import FAIL_RESPONSE, SUCCESS_CODE, SUCCESS_RESPONSE, BottleApp
 from src.utils.utils import recv_message
 
 me: Peer = None
@@ -47,12 +41,11 @@ def rfc_query(peer: Peer):
     return "RFCQuery"
 
 
-@peer_app.request()
-def _get_rfc(rfc_number: int):
-    return "GetRFC", {"RFC-Number": rfc_number}
-
-
 def get_rfc(rfc_number: int):
+    @peer_app.request()
+    def _get_rfc():
+        return "GetRFC", {"RFC-Number": rfc_number}
+
     response = _get_rfc(rfc_number)
 
     if response.status == SUCCESS_CODE:
@@ -79,13 +72,13 @@ def client_handler(port: int, commands: list[tuple[str, list]]) -> None:
         response = None
         match command:
             case "register":
-                response = register(port=port)
+                response = register(port)
             case "leave":
-                response = leave(peer=me)
+                response = leave(me)
             case "pquery":
-                response = p_query(peer=me)
+                response = p_query(me)
             case "keepalive":
-                response = keep_alive(peer=me)
+                response = keep_alive(me)
             case _:
                 return None
 
@@ -120,34 +113,22 @@ def client_handler(port: int, commands: list[tuple[str, list]]) -> None:
 
         match command:
             case "rfcquery":
-                rfcs = set(load_rfc_index(response))
-                print(rfcs)
+                rfcs = load_rfc_index(response)
                 RFC_INDEX |= rfcs
 
         peer_app.disconnect()
 
         return response
 
-    lock = threading.Lock()
-
     def make_request(command: str, args: dict = None):
-        # lock.acquire()
-
         response = peer_to_server(command, args) or peer_to_peer(command, args)
-
-        # lock.release()
-
         return response
 
     make_request("register")
-    # keep_alive_thread = threading.Timer(TTL_INTERVAL, make_request, ("keepalive",))
-    # keep_alive_thread.start()
 
     if commands is not None:
         for (command, args) in commands:
             make_request(command, args)
-
-    # keep_alive_thread.cancel()
 
 
 def client(hostname: str, port: int, commands: list[tuple[str, dict]] = None):
@@ -167,7 +148,7 @@ def client(hostname: str, port: int, commands: list[tuple[str, dict]] = None):
 
 if __name__ == "__main__":
     hostname = socket.gethostname()
-    port = 1235
-    commands = [("pquery", {}), ("rfcquery", {"hostname": hostname, "port": port})]
+    port = 9999
+    commands = [("pquery", {}), ("rfcquery", {"hostname": hostname, "port": 1234})]
 
     client(hostname, port, commands)

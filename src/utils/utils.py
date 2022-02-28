@@ -27,7 +27,7 @@ def recv_message(
         chunk_size = min(chunk_size, message_len)
         message_len -= chunk_size
 
-        response = peer_socket.recv(chunk_size)
+        response = peer_socket.recv(chunk_size, )
         message += response
 
     return message

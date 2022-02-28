@@ -2,19 +2,21 @@ import pathlib
 import pprint
 import socket
 from typing import *
+import time
 
 from src.peer.peer import Peer, load_peer, load_peers
 from src.peer.rfc import RFC, load_rfc, load_rfc_index
 from src.peer.server import P2PCommands
-from src.server.server import PORT, P2ServerCommands
+from src.server.server import PORT, TIMEOUT, P2ServerCommands
 from src.utils.http import (
     FAIL_RESPONSE,
     SUCCESS_CODE,
     SUCCESS_RESPONSE,
     http_request,
+    make_request,
     send_recv_http_request,
 )
-from src.utils.utils import recv_message
+from src.utils.utils import recv_message, send_message
 
 
 @http_request
@@ -47,22 +49,21 @@ def get_rfc(hostname: str, rfc_number: int, peer_socket: socket.socket):
     def _get_rfc():
         return P2PCommands.getrfc, hostname, {"RFC-Number": rfc_number}
 
-    request = _get_rfc(rfc_number)
+    request = _get_rfc()
     response = send_recv_http_request(request, peer_socket)
 
     if response.status == SUCCESS_CODE:
-        print("Downloading file...")
 
         rfc: RFC = load_rfc(response)
-        filepath = rfc.path
-
+        filepath = pathlib.Path(rfc.path)
         out_filepath = pathlib.Path(filepath.name)
 
-        with out_filepath.open("w") as file:
+        with out_filepath.open("wb") as file:
             while d := recv_message(peer_socket):
-                file.write(d.decode())
+                file.write(d)
 
         return SUCCESS_RESPONSE()
+
     else:
         return FAIL_RESPONSE()
 
@@ -101,10 +102,10 @@ def client_handler(
         match command:
             case P2ServerCommands.register | P2ServerCommands.keepalive:
                 me = load_peer(response)
-                pprint.pprint(me)
+                # pprint.pprint(me)
             case P2ServerCommands.pquery:
                 active_peers = load_peers(response)
-                pprint.pprint(active_peers)
+                # pprint.pprint(active_peers)
 
         return response
 
@@ -118,6 +119,7 @@ def client_handler(
                     request = rfc_query(peer_hostname)
                 case P2PCommands.getrfc:
                     request = get_rfc(peer_hostname, args["rfc_number"], peer_socket)
+                    return
 
             response = send_recv_http_request(request, peer_socket)
 
@@ -128,11 +130,11 @@ def client_handler(
                 case P2PCommands.rfcquery:
                     rfcs = load_rfc_index(response)
                     rfc_index.update(rfcs)
-                    pprint.pprint(rfc_index)
-
+                    # pprint.pprint(rfc_index)
             return response
 
-    def make_request(command: P2ServerCommands | P2PCommands, args: dict = None):
+    def execute_command(command: P2ServerCommands | P2PCommands, args: dict = None):
+        print(command)
         match command:
             case (
                 P2ServerCommands.register
@@ -144,20 +146,29 @@ def client_handler(
             case P2PCommands.rfcquery | P2PCommands.getrfc:
                 return peer_to_peer(command, args)
 
-    make_request(P2ServerCommands.register)
-    make_request(P2PCommands.rfcquery, {"hostname": hostname, "port": port})
+    execute_command(P2ServerCommands.register)
+    execute_command(P2PCommands.rfcquery, {"hostname": hostname, "port": port})
 
     if commands is not None:
         for (command, args) in commands:
-            make_request(command, args)
+            print(command, args)
+            execute_command(command, args)
 
 
 def client(hostname: str, port: int, commands: list[tuple[str, dict]] = None):
     server_address = (hostname, PORT)
 
-    with socket.create_connection(server_address) as server_socket:
-        print(f"Connected to server: {server_address}")
+    try:
+        with socket.create_connection(server_address) as server_socket:
+            server_socket.settimeout(TIMEOUT)
 
-        client_handler(
-            hostname=hostname, port=port, commands=commands, server_socket=server_socket
-        )
+            print(f"Connected to server: {server_address}")
+
+            client_handler(
+                hostname=hostname,
+                port=port,
+                commands=commands,
+                server_socket=server_socket,
+            )
+    except Exception as e:
+        print("Client: ", e)

@@ -15,6 +15,8 @@ from src.utils.http import (
 )
 from src.utils.utils import recv_message, send_message
 
+TIMEOUT = 2
+
 
 class P2ServerCommands(Enum):
     register = auto()
@@ -42,11 +44,11 @@ def leave(request: HTTPRequest, peer_index: PeerIndex):
     peer = peer_index.get(peer_cookie)
 
     if peer is None:
-        return FAIL_CODE
+        return (FAIL_CODE,)
 
     peer.leave()
 
-    return SUCCESS_CODE
+    return (SUCCESS_CODE,)
 
 
 @http_response
@@ -54,7 +56,7 @@ def p_query(request: HTTPRequest, peer_index: PeerIndex):
     peer_cookie = int(request.headers["Peer-Cookie"])
     peer = peer_index.get(peer_cookie)
     if peer is None:
-        return FAIL_CODE
+        return (FAIL_CODE,)
 
     peer.refresh()
 
@@ -73,7 +75,7 @@ def keep_alive(request: HTTPRequest, peer_index: PeerIndex):
     peer_cookie = int(request.headers["Peer-Cookie"])
     peer = peer_index.get(peer_cookie)
     if peer is None:
-        return FAIL_CODE
+        return (FAIL_CODE,)
 
     peer.refresh()
 
@@ -86,7 +88,8 @@ def server_receiver(peer_index: PeerIndex, peer_socket: socket.socket) -> None:
             case P2ServerCommands.register:
                 return register(request, peer_index)
             case P2ServerCommands.leave:
-                return leave(request, peer_index)
+                leave(request, peer_index)
+                raise Exception("Peer leaving server.")
             case P2ServerCommands.pquery:
                 return p_query(request, peer_index)
             case P2ServerCommands.keepalive:
@@ -100,7 +103,7 @@ def server_receiver(peer_index: PeerIndex, peer_socket: socket.socket) -> None:
             response = handle(request)
             send_message(response, peer_socket)
     except Exception as e:
-        print(e)
+        print("Server: ", e)
     finally:
         peer_socket.close()
         sys.exit(0)
@@ -111,27 +114,34 @@ def server() -> None:
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(address)
-    server_socket.listen(10)
+    server_socket.listen(32)
 
     peer_index = PeerIndex()
 
-    decrement_peer_thread = threading.Timer(
-        TTL_INTERVAL, peer_index.decrement_peer_ttls
-    )
-    decrement_peer_thread.start()
+    # decrement_peer_thread = threading.Timer(
+    #     TTL_INTERVAL, peer_index.decrement_peer_ttls
+    # )
+    # decrement_peer_thread.start()
+
+    
 
     try:
         while True:
+            print("start")
             conn, _ = server_socket.accept()
             t = threading.Thread(
                 target=server_receiver,
                 args=(peer_index, conn),
             )
             t.start()
+            print("stop")
+
     except KeyboardInterrupt:
         pass
 
-    decrement_peer_thread.cancel()
+    
+
+    # decrement_peer_thread.cancel()
 
 
 if __name__ == "__main__":

@@ -1,13 +1,13 @@
 import datetime
-from enum import Enum
 import http
 import http.client
 import http.server
 import platform
 import socket
+import time
+from enum import Enum
 from functools import wraps
 from io import BytesIO
-import time
 from typing import *
 
 from src.utils.utils import recv_message, send_message
@@ -144,8 +144,8 @@ def http_request(func: Callable[..., HTTPRequestReturn]):
 
         request = make_request(method=method, url=url, headers=headers, body=body)
 
-        r = HTTPRequest(bytes(request))
-        print(r)
+        # r = HTTPRequest(bytes(request))
+        # print(r)
 
         return request
 
@@ -161,8 +161,8 @@ def http_response(func: Callable[..., HTTPResponseReturn]):
 
         response = make_response(status_code=status_code, headers=headers, body=body)
 
-        r = HTTPResponse(bytes(response))
-        print(r)
+        # r = HTTPResponse(bytes(response))
+        # print(r)
 
         return response
 
@@ -171,12 +171,12 @@ def http_response(func: Callable[..., HTTPResponseReturn]):
 
 @http_response
 def FAIL_RESPONSE():
-    return FAIL_CODE
+    return (FAIL_CODE,)
 
 
 @http_response
 def SUCCESS_RESPONSE():
-    return SUCCESS_CODE
+    return (SUCCESS_CODE,)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ class RFC:
     number: int
     title: str
     hostname: Peer
-    path: pathlib.Path
+    path: str
 
 
 def load_rfc(response: HTTPResponse | HTTPRequest) -> RFC:
@@ -21,7 +21,7 @@ def load_rfc(response: HTTPResponse | HTTPRequest) -> RFC:
 
 
 def dump_rfc(rfc: RFC) -> str:
-    return json.dumps(asdict(rfc))
+    return json.dumps(asdict(rfc), default=str)
 
 
 def load_rfc_index(response: HTTPResponse | HTTPRequest) -> set[RFC]:

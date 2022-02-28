@@ -6,6 +6,7 @@ import platform
 import socket
 from functools import wraps
 from io import BytesIO
+import time
 from typing import *
 
 from src.utils.utils import recv_message, send_message
@@ -14,6 +15,8 @@ HTTP_VERSION = "HTTP/1.1"
 
 SUCCESS_CODE = 200
 FAIL_CODE = 403
+
+TIME_FMT = "%a, %d %b %Y %H:%M:%S"
 
 
 class _FakeSocket(socket.socket):
@@ -54,6 +57,7 @@ def get_default_request_headers() -> dict[str, str]:
     return {
         "Host": socket.gethostname(),
         "OS": f"{platform.system()} {platform.release()}",
+        "Date": time.strftime(TIME_FMT, time.gmtime()) + "GMT",
     }
 
 
@@ -175,6 +179,11 @@ def http_response(func: Callable[..., HTTPResponseReturn]):
 @http_response
 def FAIL_RESPONSE():
     return FAIL_CODE
+
+
+@http_response
+def SUCCESS_RESPONSE():
+    return SUCCESS_CODE
 
 
 if __name__ == "__main__":

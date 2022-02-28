@@ -44,12 +44,12 @@ PEER_ID = 0
 PEERS: dict[int, Peer] = {}
 
 
-def load_peer(response: HTTPResponse):
+def load_peer(response: HTTPResponse | HTTPRequest):
     data = json.loads(response.content.decode())
     return Peer(**data)
 
 
-def load_peers(response: HTTPResponse):
+def load_peers(response: HTTPResponse | HTTPRequest):
     data = [json.loads(i) for i in json.loads(response.content)]
     return [Peer(**peer_data) for peer_data in data]
 

@@ -126,54 +126,26 @@ def send_recv_http_request(
     return HTTPResponse(response)
 
 
-HTTPRequestReturn = (
-    tuple[str] | tuple[str, str] | tuple[str, str, dict] | tuple[str, str, dict, str]
-)
+HTTPRequestReturn = tuple[str, str] | tuple[str, str, dict] | tuple[str, str, dict, str]
 
 HTTPResponseReturn = tuple[int] | tuple[int, dict] | tuple[int, dict, str]
 
 
-class BottleApp:
-    def __init__(self):
-        self.hostname = None
-        self.port = None
-        self.socket = None
+def http_request(func: Callable[..., HTTPRequestReturn]):
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> HTTPRequest:
+        method, url, *rest = func(*args, **kwargs)
+        headers: Optional[dict] = rest[0] if len(rest) > 0 else None
+        body: str = rest[1] if len(rest) > 1 else ""
 
-    def request(self, url: str = ""):
-        return http_request(self, url)
+        request = make_request(method=method, url=url, headers=headers, body=body)
 
-    def connect(self, hostname: str, port: int):
-        self.hostname = hostname
-        self.port = port
-        self.socket = socket.create_connection((hostname, port))
+        r = HTTPRequest(bytes(request))
+        print(r)
 
-    def disconnect(self):
-        self.socket.close()
+        return request
 
-    def route(self, url: str):
-        return None
-
-
-def http_request(app: BottleApp, url: str = ""):
-    def inner(func: Callable[..., HTTPRequestReturn]):
-        @wraps(func)
-        def wrapper(*args, **kwargs) -> HTTPResponse:
-            method, *rest = func(*args, **kwargs)
-            headers: Optional[dict] = rest[0] if len(rest) > 0 else None
-            body: str = rest[1] if len(rest) > 1 else ""
-
-            request = make_request(
-                method=method, url=f"{app.hostname}{url}", headers=headers, body=body
-            )
-
-            r = HTTPRequest(bytes(request))
-            print(r)
-
-            return send_recv_http_request(request=request, server_socket=app.socket)
-
-        return wrapper
-
-    return inner
+    return wrapper
 
 
 def http_response(func: Callable[..., HTTPResponseReturn]):

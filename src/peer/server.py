@@ -48,10 +48,12 @@ def get_rfc(
 
     response = make_response(SUCCESS_CODE, body=dump_rfc(rfc))
     send_message(response, peer_socket)
+    
+    send_message(filepath.open("rb").read(), peer_socket)
 
-    with filepath.open("rb") as file:
-        while d := file.read(CHUNK_SIZE):
-            send_message(d, peer_socket)
+    # with filepath.open("rb") as file:
+    #     while d := file.read(CHUNK_SIZE):
+    #         send_message(d, peer_socket)
 
     return SUCCESS_RESPONSE()
 

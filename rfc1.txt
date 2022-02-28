@@ -536,3 +536,84 @@ c.  After Receipt and Compilation of the DEL program
         |     |            |                    |           |   |
         |     +------------+                    +-----------+   |
         |      HOST: UCLA                         HOST: SRI     |
+         \                                                     /
+
+Open Questions
+
+   1.  If the IMPs do code conversion, the checksum will not be correct.
+
+   2.  The procedure for requesting the DEL front end is not yet
+   specified.
+
+IV.  Initial Experiments
+
+Experiment One
+
+   SRI is currently modifying their on-line retrieval system which will
+   be the major software component on the Network Documentation Center so
+   that it can be operated with model 35 teletypes.  The control of the
+   teletypes will be written in DEL.  All sites will write DEL compilers
+   and use NLS through the DEL program.
+
+Experiment Two
+
+
+
+Crocker                                                       [Page 10]
+
+RFC 1                        Host Software                 7 April 1969
+
+
+   SRI will write a DEL front end for full NLS, graphics included.  UCLA
+   and UTAH will use NLS with graphics.
+
+
+         [ This RFC was put into machine readable form for entry ]
+         [ into the online RFC archives by Celeste Anderson 3/97 ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Crocker                                                       [Page 11]
+

@@ -59,8 +59,7 @@ def get_rfc(hostname: str, rfc_number: int, peer_socket: socket.socket):
         out_filepath = pathlib.Path(filepath.name)
 
         with out_filepath.open("wb") as file:
-            while d := recv_message(peer_socket):
-                file.write(d)
+            file.write(recv_message(peer_socket))
 
         return SUCCESS_RESPONSE()
 

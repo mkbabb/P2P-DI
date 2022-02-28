@@ -70,6 +70,10 @@ def task_1():
             P2PCommands.getrfc,
             {"hostname": hostname, "port": start_port, "rfc_number": 3},
         ),
+        (
+            P2PCommands.getrfc,
+            {"hostname": hostname, "port": start_port, "rfc_number": 4},
+        ),
     ]
 
     for i in range(1, clients):

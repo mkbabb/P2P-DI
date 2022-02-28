@@ -2,6 +2,7 @@ import json
 import socket
 import sys
 import threading
+from enum import Enum, auto
 from typing import *
 
 from src.peer.peer import TTL_INTERVAL, PeerIndex, dump_peer
@@ -13,6 +14,14 @@ from src.utils.http import (
     http_response,
 )
 from src.utils.utils import recv_message, send_message
+
+
+class P2ServerCommands(Enum):
+    register = auto()
+    leave = auto()
+    pquery = auto()
+    keepalive = auto()
+
 
 PORT = 65243
 
@@ -73,14 +82,14 @@ def keep_alive(request: HTTPRequest, peer_index: PeerIndex):
 
 def server_receiver(peer_index: PeerIndex, peer_socket: socket.socket) -> None:
     def handle(request: HTTPRequest) -> bytes:
-        match request.command.lower():
-            case "register":
+        match (command := P2ServerCommands[request.command.lower()]):
+            case P2ServerCommands.register:
                 return register(request, peer_index)
-            case "leave":
+            case P2ServerCommands.leave:
                 return leave(request, peer_index)
-            case "pquery":
+            case P2ServerCommands.pquery:
                 return p_query(request, peer_index)
-            case "keepalive":
+            case P2ServerCommands.keepalive:
                 return keep_alive(request, peer_index)
             case _:
                 return FAIL_RESPONSE()
@@ -106,10 +115,10 @@ def server() -> None:
 
     peer_index = PeerIndex()
 
-    # decrement_peer_thread = threading.Timer(
-    #     TTL_INTERVAL, peer_index.decrement_peer_ttls
-    # )
-    # decrement_peer_thread.start()
+    decrement_peer_thread = threading.Timer(
+        TTL_INTERVAL, peer_index.decrement_peer_ttls
+    )
+    decrement_peer_thread.start()
 
     try:
         while True:
@@ -122,7 +131,7 @@ def server() -> None:
     except KeyboardInterrupt:
         pass
 
-    # decrement_peer_thread.cancel()
+    decrement_peer_thread.cancel()
 
 
 if __name__ == "__main__":

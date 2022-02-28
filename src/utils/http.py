@@ -1,4 +1,5 @@
 import datetime
+from enum import Enum
 import http
 import http.client
 import http.server
@@ -135,6 +136,9 @@ def http_request(func: Callable[..., HTTPRequestReturn]):
     @wraps(func)
     def wrapper(*args, **kwargs) -> HTTPRequest:
         method, url, *rest = func(*args, **kwargs)
+        if isinstance(method, Enum):
+            method = method.name
+
         headers: Optional[dict] = rest[0] if len(rest) > 0 else None
         body: str = rest[1] if len(rest) > 1 else ""
 

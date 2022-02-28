@@ -2,6 +2,7 @@ import pathlib
 import socket
 import sys
 import threading
+from enum import Enum, auto
 from typing import *
 
 from src.peer.rfc import RFC, dump_rfc, dump_rfc_index
@@ -14,6 +15,11 @@ from src.utils.http import (
     make_response,
 )
 from src.utils.utils import CHUNK_SIZE, recv_message, send_message
+
+
+class P2PCommands(Enum):
+    rfcquery = auto()
+    getrfc = auto()
 
 
 @http_response
@@ -48,10 +54,12 @@ def get_rfc(
 
 def server_receiver(rfc_index: set[RFC], peer_socket: socket.socket) -> None:
     def handle(request: HTTPRequest) -> bytes:
-        match request.command.lower():
-            case "rfcquery":
+        
+
+        match (command := P2PCommands[request.command.lower()]):
+            case P2PCommands.rfcquery:
                 return rfc_query(request, rfc_index)
-            case "getrfc":
+            case P2PCommands.getrfc:
                 return get_rfc(
                     request,
                     rfc_index,

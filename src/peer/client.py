@@ -1,52 +1,51 @@
 import pathlib
+import pprint
 import socket
 from typing import *
 
 from src.peer.peer import Peer, load_peer, load_peers
 from src.peer.rfc import RFC, load_rfc, load_rfc_index
-from src.server.server import PORT
+from src.peer.server import P2PCommands
+from src.server.server import PORT, P2ServerCommands
 from src.utils.http import (
     FAIL_RESPONSE,
     SUCCESS_CODE,
     SUCCESS_RESPONSE,
-    BottleApp,
     http_request,
     send_recv_http_request,
 )
 from src.utils.utils import recv_message
 
-import pprint
+
+@http_request
+def register(hostname: str, port: int):
+    return P2ServerCommands.register, hostname, {"port": port}
 
 
 @http_request
-def register(port: int):
-    return "Register", {"port": port}
+def leave(hostname: str, peer: Peer):
+    return P2ServerCommands.leave, hostname, {"Peer-Cookie": peer.cookie}
 
 
 @http_request
-def leave(peer: Peer):
-    return "Leave", {"Peer-Cookie": peer.cookie}
+def p_query(hostname: str, peer: Peer):
+    return P2ServerCommands.pquery, hostname, {"Peer-Cookie": peer.cookie}
 
 
 @http_request
-def p_query(peer: Peer):
-    return "PQuery", {"Peer-Cookie": peer.cookie}
+def keep_alive(hostname: str, peer: Peer):
+    return P2ServerCommands.keepalive, hostname, {"Peer-Cookie": peer.cookie}
 
 
 @http_request
-def keep_alive(peer: Peer):
-    return "KeepAlive", {"Peer-Cookie": peer.cookie}
+def rfc_query(hostname: str):
+    return P2PCommands.rfcquery, hostname
 
 
-@http_request
-def rfc_query():
-    return "RFCQuery", {}
-
-
-def get_rfc(rfc_number: int, peer_socket: socket.socket):
+def get_rfc(hostname: str, rfc_number: int, peer_socket: socket.socket):
     @http_request
     def _get_rfc():
-        return "GetRFC", {"RFC-Number": rfc_number}
+        return P2PCommands.getrfc, hostname, {"RFC-Number": rfc_number}
 
     request = _get_rfc(rfc_number)
     response = send_recv_http_request(request, peer_socket)
@@ -68,27 +67,31 @@ def get_rfc(rfc_number: int, peer_socket: socket.socket):
         return FAIL_RESPONSE()
 
 
+Command = P2PCommands | P2ServerCommands
+
+
 def client_handler(
     hostname: str,
     port: int,
-    commands: list[tuple[str, list]],
+    commands: list[tuple[Command, dict]],
     server_socket: socket.socket,
 ) -> None:
     rfc_index: set[RFC] = set()
+    me: Peer = None
 
-    def peer_to_server(command: str, args: dict):
-        global me
+    def peer_to_server(command: P2ServerCommands, args: dict):
+        nonlocal me
 
         request = None
         match command:
-            case "register":
-                request = register(port)
-            case "leave":
-                request = leave(me)
-            case "pquery":
-                request = p_query(me)
-            case "keepalive":
-                request = keep_alive(me)
+            case P2ServerCommands.register:
+                request = register(hostname, port)
+            case P2ServerCommands.leave:
+                request = leave(hostname, me)
+            case P2ServerCommands.pquery:
+                request = p_query(hostname, me)
+            case P2ServerCommands.keepalive:
+                request = keep_alive(hostname, me)
 
         response = send_recv_http_request(request, server_socket)
 
@@ -96,25 +99,25 @@ def client_handler(
             return None
 
         match command:
-            case "register" | "keepalive":
+            case P2ServerCommands.register | P2ServerCommands.keepalive:
                 me = load_peer(response)
                 pprint.pprint(me)
-            case "pquery":
+            case P2ServerCommands.pquery:
                 active_peers = load_peers(response)
                 pprint.pprint(active_peers)
 
         return response
 
-    def peer_to_peer(command: str, args: dict):
-        address = (args["hostname"], args["port"])
+    def peer_to_peer(command: P2PCommands, args: dict):
+        peer_hostname, peer_port = args["hostname"], args["port"]
 
-        with socket.create_connection(address) as peer_socket:
+        with socket.create_connection((peer_hostname, peer_port)) as peer_socket:
             request = None
             match command:
-                case "rfcquery":
-                    request = rfc_query()
-                case "getrfc":
-                    request = get_rfc(args["rfc_number"], peer_socket)
+                case P2PCommands.rfcquery:
+                    request = rfc_query(peer_hostname)
+                case P2PCommands.getrfc:
+                    request = get_rfc(peer_hostname, args["rfc_number"], peer_socket)
 
             response = send_recv_http_request(request, peer_socket)
 
@@ -122,22 +125,27 @@ def client_handler(
                 return None
 
             match command:
-                case "rfcquery":
+                case P2PCommands.rfcquery:
                     rfcs = load_rfc_index(response)
                     rfc_index.update(rfcs)
                     pprint.pprint(rfc_index)
 
             return response
 
-    def make_request(command: str, args: dict = None):
-        match (command := command.lower()):
-            case "register" | "leave" | "pquery" | "keepalive":
+    def make_request(command: P2ServerCommands | P2PCommands, args: dict = None):
+        match command:
+            case (
+                P2ServerCommands.register
+                | P2ServerCommands.leave
+                | P2ServerCommands.pquery
+                | P2ServerCommands.keepalive
+            ):
                 return peer_to_server(command, args)
-            case "rfcquery" | "getrfc":
+            case P2PCommands.rfcquery | P2PCommands.getrfc:
                 return peer_to_peer(command, args)
 
-    make_request("register")
-    make_request("rfcquery", {"hostname": hostname, "port": port})
+    make_request(P2ServerCommands.register)
+    make_request(P2PCommands.rfcquery, {"hostname": hostname, "port": port})
 
     if commands is not None:
         for (command, args) in commands:

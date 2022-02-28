@@ -7,6 +7,8 @@ from src.server.server import PORT
 from src.utils.http import FAIL_RESPONSE, SUCCESS_CODE, SUCCESS_RESPONSE, BottleApp
 from src.utils.utils import recv_message
 
+import pprint
+
 me: Peer = None
 
 app = BottleApp()
@@ -34,8 +36,8 @@ def keep_alive(peer: Peer):
 
 
 @peer_app.request()
-def rfc_query(peer: Peer):
-    return "RFCQuery"
+def rfc_query():
+    return "RFCQuery", {}
 
 
 def get_rfc(rfc_number: int):
@@ -63,7 +65,7 @@ def get_rfc(rfc_number: int):
 
 
 def client_handler(hostname: str, port: int, commands: list[tuple[str, list]]) -> None:
-    rfc_index: set[RFC] = {}
+    rfc_index: set[RFC] = set()
 
     def peer_to_server(command: str, args: dict):
         global me
@@ -87,9 +89,10 @@ def client_handler(hostname: str, port: int, commands: list[tuple[str, list]]) -
         match command:
             case "register" | "keepalive":
                 me = load_peer(response)
+                pprint.pprint(me)
             case "pquery":
                 active_peers = load_peers(response)
-                print(active_peers)
+                pprint.pprint(active_peers)
 
         return response
 
@@ -99,7 +102,7 @@ def client_handler(hostname: str, port: int, commands: list[tuple[str, list]]) -
             case "rfcquery" | "getrfc":
                 peer_app.connect(args["hostname"], args["port"])
             case _:
-                return
+                return None
 
         match command:
             case "rfcquery":
@@ -113,18 +116,22 @@ def client_handler(hostname: str, port: int, commands: list[tuple[str, list]]) -
         match command:
             case "rfcquery":
                 rfcs = load_rfc_index(response)
-                rfc_index.add(*rfcs)
+                rfc_index.update(rfcs)
+
+                pprint.pprint(rfc_index)
+                print()
 
         peer_app.disconnect()
 
         return response
 
     def make_request(command: str, args: dict = None):
+        command = command.lower()
         response = peer_to_server(command, args) or peer_to_peer(command, args)
         return response
 
     make_request("register")
-    make_request("rfcquery", {"hostname": hostname, "port": port})
+    # make_request("rfcquery", {"hostname": hostname, "port": port})
 
     if commands is not None:
         for (command, args) in commands:

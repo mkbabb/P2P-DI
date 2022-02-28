@@ -86,12 +86,12 @@ def server_receiver(peer_index: PeerIndex, peer_socket: socket.socket) -> None:
                 return FAIL_RESPONSE()
 
     try:
-        while request := HTTPRequest(recv_message(peer_socket)):
+        while message := recv_message(peer_socket):
+            request = HTTPRequest(message)
             response = handle(request)
             send_message(response, peer_socket)
     except Exception as e:
         print(e)
-        pass
     finally:
         peer_socket.close()
         sys.exit(0)
@@ -106,10 +106,10 @@ def server() -> None:
 
     peer_index = PeerIndex()
 
-    decrement_peer_thread = threading.Timer(
-        TTL_INTERVAL, peer_index.decrement_peer_ttls
-    )
-    decrement_peer_thread.start()
+    # decrement_peer_thread = threading.Timer(
+    #     TTL_INTERVAL, peer_index.decrement_peer_ttls
+    # )
+    # decrement_peer_thread.start()
 
     try:
         while True:
@@ -122,7 +122,7 @@ def server() -> None:
     except KeyboardInterrupt:
         pass
 
-    decrement_peer_thread.cancel()
+    # decrement_peer_thread.cancel()
 
 
 if __name__ == "__main__":

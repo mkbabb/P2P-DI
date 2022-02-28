@@ -1,7 +1,7 @@
 import socket
 from typing import *
 
-HEADER_SIZE = 4
+HEADER_SIZE = 10
 CHUNK_SIZE = 1024
 
 
@@ -20,7 +20,8 @@ def recv_message(
     chunk_size: int = CHUNK_SIZE,
 ) -> bytes:
     message = b""
-    message_len, _ = parse_message(peer_socket.recv(header_size), header_size)
+    t_message = peer_socket.recv(header_size)
+    message_len, _ = parse_message(t_message, header_size)
 
     while message_len > 0:
         chunk_size = min(chunk_size, message_len)

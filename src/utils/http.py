@@ -35,7 +35,11 @@ class HTTPResponse(http.client.HTTPResponse):
         self.begin()
 
         if (length := self.getheader("Content-Length")) is not None:
-            self.content = self.read(int(length))
+            self.content = self.read(len(response))
+
+    def __str__(self) -> str:
+        return f"""{self.version} {self.status} {self.reason}
+{self.headers}"""
 
 
 class HTTPRequest(http.server.BaseHTTPRequestHandler):
@@ -46,6 +50,10 @@ class HTTPRequest(http.server.BaseHTTPRequestHandler):
         self.parse_request()
         self.content = self.rfile.read()
         self.rfile.seek(0)
+
+    def __str__(self) -> str:
+        return f"""{self.command} {self.path} {self.protocol_version}
+{self.headers}"""
 
 
 def create_status_line(status_code: int = 200) -> bytes:
@@ -158,8 +166,8 @@ def http_request(app: BottleApp, url: str = ""):
                 method=method, url=f"{app.hostname}{url}", headers=headers, body=body
             )
 
-            # r = HTTPRequest(bytes(request))
-            # print(repr(r))
+            r = HTTPRequest(bytes(request))
+            print(r)
 
             return send_recv_http_request(request=request, server_socket=app.socket)
 
@@ -177,8 +185,8 @@ def http_response(func: Callable[..., HTTPResponseReturn]):
 
         response = make_response(status_code=status_code, headers=headers, body=body)
 
-        # r = HTTPResponse(bytes(response))
-        # print(repr(r))
+        r = HTTPResponse(bytes(response))
+        print(r)
 
         return response
 
@@ -207,11 +215,8 @@ if __name__ == "__main__":
     )
 
     parsed = HTTPResponse(response)
-    print(parsed.headers)
-    print(parsed.content)
+    print(parsed)
 
     request = make_request("GET", body="hellow")
     parsed = HTTPRequest(request)
-    print(parsed.command)
-    print(parsed.headers)
-    print(parsed.content)
+    print(parsed)

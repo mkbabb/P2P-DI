@@ -13,14 +13,10 @@ def create_peer(
     commands: list[tuple[str, dict]] = None,
     rfc_index: set[RFC] = None,
 ) -> None:
-    server_thread = threading.Thread(
-        target=server, args=(hostname, port, rfc_index), daemon=True
-    )
+    server_thread = threading.Thread(target=server, args=(hostname, port, rfc_index), daemon=True)
     server_thread.start()
 
-    client_thread = threading.Thread(
-        target=client, args=(hostname, port, commands), daemon=True
-    )
+    client_thread = threading.Thread(target=client, args=(hostname, port, commands))
     client_thread.start()
 
 
@@ -38,15 +34,15 @@ def task_1():
             for i in range(rfc_count)
         ]
     )
-    p0 = create_peer(hostname, start_port, rfc_index)
+    p0 = create_peer(hostname, start_port, None, rfc_index)
 
     commands = [
-        ("pquery", {}),
-        ("rfcquery", {"hostname": hostname, "port": start_port}),
+        # ("pquery", {}),
+        # ("rfcquery", {"hostname": hostname, "port": start_port}),
     ]
 
     for i in range(1, clients):
-        create_peer(hostname, start_port + i, commands)
+        create_peer(hostname, start_port + i, commands, None)
 
 
 if __name__ == "__main__":

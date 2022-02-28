@@ -61,12 +61,12 @@ def server_receiver(rfc_index: set[RFC], peer_socket: socket.socket) -> None:
                 return FAIL_RESPONSE()
 
     try:
-        while request := HTTPRequest(recv_message(peer_socket)):
+        while message := recv_message(peer_socket):
+            request = HTTPRequest(message)
             response = handle(request)
             send_message(response, peer_socket)
     except Exception as e:
         print(e)
-        pass
     finally:
         peer_socket.close()
         sys.exit(0)
@@ -74,6 +74,8 @@ def server_receiver(rfc_index: set[RFC], peer_socket: socket.socket) -> None:
 
 def server(hostname: str, port: str, rfc_index: set[RFC] = None) -> None:
     address = (hostname, port)
+
+    print(f"Started peer server on {address}")
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(address)

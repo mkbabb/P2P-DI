@@ -1,15 +1,15 @@
 # P2P-DI
 
-Implementation of a peer-to-peer (P2P) using a distributed index (P2P-DI). This uses a
-host registration server (RS), found in [`server.py`](src/server/server.py), wherein
-each peer client, [`client.py`](src/peer/client.py), registers first with. Each peer
-also has a server component, [`server.py`](src/peer/server.py), which is used to house a
-peer's index information, and facilitate all P2P communication.
+Implementation of a peer-to-peer distributed index (P2P-DI) system. This uses a host
+registration server (RS), found in [`server.py`](src/server/server.py), wherein each
+peer client, [`client.py`](src/peer/client.py), registers first with. Each peer also has
+a server component, [`server.py`](src/peer/server.py), which is used to house a peer's
+index information, and facilitate all P2P communication.
 
 ## Quick Start
 
 No dependencies! Just Python **3.10**. Very important as we employ a judicious usage of
-`3.10`'s new `match` statement (pattern matching, think a sophisticated switch
+Python `3.10`'s new `match` statement (pattern matching, think a sophisticated switch
 statement).
 
 Nearly every file found herein is a Python _module_, thus it must be run like so:
@@ -20,12 +20,12 @@ To run the required tasks of the project, first initialize the registration serv
 
     python3 -m src.server.server
 
-Finally, run the `peer` module (with a special [`__main__.py`](src/peer/__main__.py)
-file that allows it to be run directly):
+Finally, run the `peer` module (containing a special
+[`__main__.py`](src/peer/__main__.py) file that allows it to be run directly):
 
     python3 -m src.peer
 
-This will execute either of the tasks - just comment one, or none out, to change the
+This will execute either of the tasks - just comment one, or none, out to change the
 output.
 
 To run the simple test case, execute `__main__.py` without any modifications - using the
@@ -38,13 +38,14 @@ above command.
 Low-level socket communication is achieved by way of two layers of abstraction. First,
 each and every message sent and received herein is wrapped by `send_message` and
 `recv_message` (found within [`utils.py`](src/utils/utils.py)). These simple utility
-functions encode the message into a pseudo-TLV format, wherein, the length of the value
-component is included in the high-order 10 bytes of the message.
+functions encode the message into a pseudo-TLV format, wherein, the length (a 10-byte
+long sequence) of the value component is appended onto the high-order section of the
+message.
 
 ### Layer 2
 
 The final layer includes a pseudo-HTTP protocol, wherein _nearly_ every message is
-wrapped in. This protocol is almost identical to HTTP in every way, using the low-level
+enwrapped. This protocol is almost identical to HTTP in every way, using the low-level
 facilities found within the Python `http` module - mirrored by
 [`http.py`](src/utils/http.py). This is used to achieve a standardized process whereby
 pseudo-HTTP packets are created and parsed (header creation, content decoding, etc). A
@@ -120,7 +121,8 @@ class RFC:
 
 ## Peer-To-Server
 
-A peer client can communicate with the registration server by the following methods:
+A peer client can communicate with the registration server by the following HTTP-like
+methods:
 
 ### `Register`
 
@@ -128,7 +130,7 @@ Registers the peer with the RS, merging it into a `PeerIndex` data structure. If
 peer with that hostname and port address combination has already been registered, the
 original peer is returned, re-activated.
 
-Success value:
+#### Success Value:
 
 ```js
 {
@@ -144,7 +146,7 @@ Contained within the request header is a `Peer-Cookie` field, containing the coo
 value for the chosen peer. If it's found in the PeerIndex, the peer is set to inactive.
 If not, an error message is returned.
 
-Success value:
+#### Success Value:
 
 ```js
 {
@@ -159,7 +161,7 @@ value for the chosen peer. If it's found in the PeerIndex, the peer is refreshed
 list of active peers (not including the current peer) is returned within the body field
 of the response. Else, and error is returned.
 
-Success value:
+#### Success Value:
 
 ```js
 {
@@ -175,7 +177,7 @@ ontained within the request header is a `Peer-Cookie` field, containing the cook
 for the chosen peer. If it's found in the PeerIndex, the peer is refreshed and returned
 in the response body.
 
-Success value:
+#### Success Value:
 
 ```js
 {
@@ -187,13 +189,16 @@ Success value:
 
 ## Peer-To-Peer
 
-A peer client can communicate with another peer's server by the following methods.
+A peer client can communicate with another peer's server by the following HTTP-like
+methods.
 
 ### `RFCQuery`
 
 Query the peer's RFC index (stored on the peer's server, remember). This is a simple
 JSON dump of the RFC index into the response body. This index is then merged into the
 caller's index.
+
+#### Success Value:
 
 ```js
 {
@@ -220,7 +225,7 @@ Finally, the caller processes the raw bytes of the response's content section, a
 creates a new file object with the same name. This new file is defined to be statically
 located within the `./out/` directory.
 
-Success value 1:
+#### Success Value 1:
 
 ```js
 {
@@ -230,7 +235,7 @@ Success value 1:
 }
 ```
 
-Success value 1:
+#### Success Value 1:
 
 ```js
 {

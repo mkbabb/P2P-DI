@@ -4,16 +4,16 @@ import socket
 import threading
 import time
 
-from src.peer.client import client
-from src.peer.rfc import RFC
-from src.peer.server import P2PCommands, server
-from src.server.server import P2ServerCommands
-from src.utils.utils import timethat
+from p2p_di.peer.client import client
+from p2p_di.peer.rfc import RFC
+from p2p_di.peer.server import P2PCommands, server
+from p2p_di.server.server import P2ServerCommands
+from p2p_di.utils.utils import timethat
 
 RFC_TOTAL = 500
 HOSTNAME = socket.gethostname()
 START_PORT = 1234
-BASE_DIR = pathlib.Path("data/")
+BASE_DIR = pathlib.Path("rfcs/")
 
 
 def create_peer(
@@ -170,6 +170,6 @@ def simple_test():
 
 
 if __name__ == "__main__":
-    simple_test()
-    # task_1()
+    # simple_test()
+    task_1()
     # task_2()

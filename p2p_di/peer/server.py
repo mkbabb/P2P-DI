@@ -5,16 +5,16 @@ import threading
 from enum import Enum, auto
 from typing import *
 
-from src.peer.rfc import RFC, dump_rfc, dump_rfc_index
-from src.server.server import TIMEOUT
-from src.utils.http import (
+from p2p_di.peer.rfc import RFC, dump_rfc, dump_rfc_index
+from p2p_di.server.server import TIMEOUT
+from p2p_di.utils.http import (
     FAIL_RESPONSE,
     SUCCESS_CODE,
     HTTPRequest,
     http_response,
     make_response,
 )
-from src.utils.utils import recv_message, send_message, timethat
+from p2p_di.utils.utils import recv_message, send_message, timethat
 
 
 class P2PCommands(Enum):

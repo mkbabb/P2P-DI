@@ -6,11 +6,11 @@ import threading
 from typing import *
 import time
 
-from src.peer.peer import Peer, load_peer, load_peers
-from src.peer.rfc import RFC, load_rfc, load_rfc_index
-from src.peer.server import P2PCommands
-from src.server.server import PORT, TIMEOUT, P2ServerCommands
-from src.utils.http import (
+from p2p_di.peer.peer import Peer, load_peer, load_peers
+from p2p_di.peer.rfc import RFC, load_rfc, load_rfc_index
+from p2p_di.peer.server import P2PCommands
+from p2p_di.server.server import PORT, TIMEOUT, P2ServerCommands
+from p2p_di.utils.http import (
     FAIL_RESPONSE,
     SUCCESS_CODE,
     SUCCESS_RESPONSE,
@@ -19,7 +19,7 @@ from src.utils.http import (
     make_request,
     send_recv_http_request,
 )
-from src.utils.utils import recv_message, send_message, timethat
+from p2p_di.utils.utils import recv_message, send_message, timethat
 
 
 @http_request

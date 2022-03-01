@@ -1,9 +1,9 @@
 # P2P-DI
 
 Implementation of a peer-to-peer (P2P) using a distributed index (P2P-DI). This uses a
-host registration server (RS), found in [`server.py`](src/server/server.py), wherein
-each peer client, [`client.py`](src/peer/client.py), registers first with. Each peer
-also has a server component, [`server.py`](src/peer/server.py), which is used to house a
+host registration server (RS), found in [`server.py`](p2p_di/server/server.py), wherein
+each peer client, [`client.py`](p2p_di/peer/client.py), registers first with. Each peer
+also has a server component, [`server.py`](p2p_di/peer/server.py), which is used to house a
 peer's index information, and facilitate all P2P communication.
 
 ## Quick Start
@@ -18,12 +18,12 @@ Nearly every file found herein is a Python _module_, thus it must be run like so
 
 To run the required tasks of the project, first initialize the registration server:
 
-    python3 -m src.server.server
+    python3 -m p2p_di.server.server
 
-Finally, run the `peer` module (with a special [`__main__.py`](src/peer/__main__.py)
+Finally, run the `peer` module (with a special [`__main__.py`](p2p_di/peer/__main__.py)
 file that allows it to be run directly):
 
-    python3 -m src.peer
+    python3 -m p2p_di.peer
 
 This will execute either of the tasks - just comment one, or none out, to change the
 output.
@@ -37,7 +37,7 @@ above command.
 
 Low-level socket communication is achieved by way of two layers of abstraction. First,
 each and every message sent and received herein is wrapped by `send_message` and
-`recv_message` (found within [`utils.py`](src/utils/utils.py)). These simple utility
+`recv_message` (found within [`utils.py`](p2p_di/utils/utils.py)). These simple utility
 functions encode the message into a pseudo-TLV format, wherein, the length of the value
 component is included in the high-order 10 bytes of the message.
 
@@ -46,7 +46,7 @@ component is included in the high-order 10 bytes of the message.
 The final layer includes a pseudo-HTTP protocol, wherein _nearly_ every message is
 wrapped in. This protocol is almost identical to HTTP in every way, using the low-level
 facilities found within the Python `http` module - mirrored by
-[`http.py`](src/utils/http.py). This is used to achieve a standardized process whereby
+[`http.py`](p2p_di/utils/http.py). This is used to achieve a standardized process whereby
 pseudo-HTTP packets are created and parsed (header creation, content decoding, etc).
 
 These HTTP packets come in two forms, `response` and `request` - again, mirroring the
@@ -78,7 +78,7 @@ Date: Tue, 01 Mar 2022 00:26:06GMT
 
 Several objects are used to represent the project data.
 
-### [`Peer`](src/peer/peer.py)
+### [`Peer`](p2p_di/peer/peer.py)
 
 A `Peer` object represents a peer and has the following structure:
 
@@ -94,12 +94,12 @@ class Peer:
     ttl: int = TTL
 ```
 
-### [`PeerIndex`](src/peer/peer.py)
+### [`PeerIndex`](p2p_di/peer/peer.py)
 
 A `PeerIndex` object is a simple wrapper containing a list of `Peer` objects, as well
 has some utility functions for manipulating the peers therein.
 
-### [`RFC`](src/peer/rfc.py)
+### [`RFC`](p2p_di/peer/rfc.py)
 
 A `RFC` object is an object reflecting several data attributes of an RFC:
 

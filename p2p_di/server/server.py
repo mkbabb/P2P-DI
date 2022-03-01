@@ -5,15 +5,15 @@ import threading
 from enum import Enum, auto
 from typing import *
 
-from src.peer.peer import TTL_INTERVAL, PeerIndex, dump_peer
-from src.utils.http import (
+from p2p_di.peer.peer import TTL_INTERVAL, PeerIndex, dump_peer
+from p2p_di.utils.http import (
     FAIL_CODE,
     FAIL_RESPONSE,
     SUCCESS_CODE,
     HTTPRequest,
     http_response,
 )
-from src.utils.utils import recv_message, send_message
+from p2p_di.utils.utils import recv_message, send_message
 
 TIMEOUT = 1.0
 PORT = 65243

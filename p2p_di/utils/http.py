@@ -10,7 +10,7 @@ from functools import wraps
 from io import BytesIO
 from typing import *
 
-from src.utils.utils import recv_message, send_message
+from p2p_di.utils.utils import recv_message, send_message
 
 HTTP_VERSION = "HTTP/1.1"
 

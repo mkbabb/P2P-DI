@@ -3,8 +3,8 @@ import pathlib
 from dataclasses import asdict, dataclass
 from typing import *
 
-from src.peer.peer import Peer
-from src.utils.http import HTTPRequest, HTTPResponse
+from p2p_di.peer.peer import Peer
+from p2p_di.utils.http import HTTPRequest, HTTPResponse
 
 
 @dataclass(frozen=True)

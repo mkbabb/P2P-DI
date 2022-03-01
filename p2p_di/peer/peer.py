@@ -3,7 +3,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import *
 
-from src.utils.http import HTTPRequest, HTTPResponse
+from p2p_di.utils.http import HTTPRequest, HTTPResponse
 
 TTL = 7200
 TTL_INTERVAL = 5.0

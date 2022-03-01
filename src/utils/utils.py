@@ -1,3 +1,5 @@
+from datetime import datetime
+from functools import wraps
 import socket
 from typing import *
 
@@ -40,3 +42,24 @@ def send_message(
     header = f"{len(data):<{header_size}}"
     message = header.encode() + data
     return peer_socket.send(message)
+
+
+def timethat(func: Callable[..., Any]):
+    total_time = 0
+
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        nonlocal total_time
+        start = datetime.now()
+        result = func(*args, **kwargs)
+        end = datetime.now()
+
+        delta = (end - start).total_seconds() / 1000
+        total_time += delta
+
+        print(f"Took {delta}ms!")
+        print(total_time)
+
+        return result
+
+    return wrapper

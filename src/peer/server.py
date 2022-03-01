@@ -14,7 +14,7 @@ from src.utils.http import (
     http_response,
     make_response,
 )
-from src.utils.utils import recv_message, send_message
+from src.utils.utils import recv_message, send_message, timethat
 
 
 class P2PCommands(Enum):
@@ -28,6 +28,7 @@ def rfc_query(request: HTTPRequest, rfc_index: set[RFC]):
     return SUCCESS_CODE, {}, dump_rfc_index(rfc_index)
 
 
+@timethat
 def get_rfc(
     request: HTTPRequest, rfc_index: set[RFC], peer_socket: socket.socket
 ) -> Optional[bytes]:

@@ -19,7 +19,7 @@ from src.utils.http import (
     make_request,
     send_recv_http_request,
 )
-from src.utils.utils import recv_message, send_message
+from src.utils.utils import recv_message, send_message, timethat
 
 
 @http_request
@@ -46,7 +46,7 @@ def keep_alive(hostname: str, peer: Peer):
 def rfc_query(hostname: str):
     return P2PCommands.rfcquery, hostname
 
-
+@timethat
 def get_rfc(hostname: str, rfc_number: int, peer_socket: socket.socket):
     @http_request
     def _get_rfc():
@@ -105,10 +105,10 @@ def client_handler(
         match command:
             case P2ServerCommands.register | P2ServerCommands.keepalive:
                 me = load_peer(response)
-                pprint.pprint(me)
+                # pprint.pprint(me)
             case P2ServerCommands.pquery:
                 active_peers = load_peers(response)
-                pprint.pprint(active_peers)
+                # pprint.pprint(active_peers)
 
         return response
 

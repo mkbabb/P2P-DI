@@ -8,6 +8,7 @@ from src.peer.client import client
 from src.peer.rfc import RFC
 from src.peer.server import P2PCommands, server
 from src.server.server import P2ServerCommands
+from src.utils.utils import timethat
 
 RFC_TOTAL = 500
 HOSTNAME = socket.gethostname()
@@ -53,7 +54,7 @@ def make_rfc_index(
 def task_1():
     threads: list[threading.Thread] = []
 
-    clients = 6
+    clients = 20
     rfc_count = 60
 
     rfc_index = make_rfc_index(HOSTNAME, BASE_DIR, rfc_count, False)
@@ -92,7 +93,7 @@ def task_1():
 def task_2():
     threads: list[threading.Thread] = []
 
-    clients = 6
+    clients = 20
     rfc_count = 10
 
     rfc_indexes = {

@@ -6,7 +6,7 @@ from enum import Enum, auto
 from typing import *
 
 from p2p_di.peer.rfc import RFC, dump_rfc, dump_rfc_index
-from p2p_di.server.server import TIMEOUT
+from p2p_di.registration_server.server import TIMEOUT
 from p2p_di.utils.http import (
     FAIL_RESPONSE,
     SUCCESS_CODE,

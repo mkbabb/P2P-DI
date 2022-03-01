@@ -1,10 +1,10 @@
 # P2P-DI
 
 Implementation of a peer-to-peer distributed index (P2P-DI) system. This uses a host
-registration server (RS), found in [`server.py`](p2p_di/server/server.py), wherein each
-peer client, [`client.py`](p2p_di/peer/client.py), registers first with. Each peer also has
-a server component, [`server.py`](p2p_di/peer/server.py), which is used to house a peer's
-index information, and facilitate all P2P communication.
+registration server (RS), found in [`server.py`](p2p_di/registration_server/server.py),
+wherein each peer client, [`client.py`](p2p_di/peer/client.py), registers first with.
+Each peer also has a server component, [`server.py`](p2p_di/peer/server.py), which is
+used to house a peer's index information, and facilitate all P2P communication.
 
 ## Quick Start
 
@@ -37,19 +37,19 @@ above command.
 
 Low-level socket communication is achieved by way of two layers of abstraction. First,
 each and every message sent and received herein is wrapped by `send_message` and
-`receive_message` (found within [`utils.py`](p2p_di/utils/utils.py)). These simple utility
-functions encode the message into a pseudo-TLV format, wherein, the length (a 10-byte
-long sequence) of the value component is appended onto the high-order section of the
-message.
+`receive_message` (found within [`utils.py`](p2p_di/utils/utils.py)). These simple
+utility functions encode the message into a pseudo-TLV format, wherein, the length (a
+10-byte long sequence) of the value component is appended onto the high-order section of
+the message.
 
 ### Layer 2
 
 The final layer includes a pseudo-HTTP protocol, wherein _nearly_ every message is
 enwrapped. This protocol is almost identical to HTTP in every way, using the low-level
 facilities found within the Python `http` module - mirrored by
-[`http.py`](p2p_di/utils/http.py). This is used to achieve a standardized process whereby
-pseudo-HTTP packets are created and parsed (header creation, content decoding, etc). A
-typical packet is very much reminiscent of HTTP/1.1.
+[`http.py`](p2p_di/utils/http.py). This is used to achieve a standardized process
+whereby pseudo-HTTP packets are created and parsed (header creation, content decoding,
+etc). A typical packet is very much reminiscent of HTTP/1.1.
 
 These HTTP packets come in two forms, `response` and `request` - again, mirroring the
 standard HTTP/1.1 format. Each has a preamble section - containing an address-like

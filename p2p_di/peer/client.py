@@ -9,7 +9,7 @@ import time
 from p2p_di.peer.peer import Peer, load_peer, load_peers
 from p2p_di.peer.rfc import RFC, load_rfc, load_rfc_index
 from p2p_di.peer.server import P2PCommands
-from p2p_di.server.server import PORT, TIMEOUT, P2ServerCommands
+from p2p_di.registration_server.server import PORT, TIMEOUT, P2ServerCommands
 from p2p_di.utils.http import (
     FAIL_RESPONSE,
     SUCCESS_CODE,

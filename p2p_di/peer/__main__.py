@@ -7,7 +7,7 @@ import time
 from p2p_di.peer.client import client
 from p2p_di.peer.rfc import RFC
 from p2p_di.peer.server import P2PCommands, server
-from p2p_di.server.server import P2ServerCommands
+from p2p_di.registration_server.server import P2ServerCommands
 from p2p_di.utils.utils import timethat
 
 RFC_TOTAL = 500
@@ -170,6 +170,6 @@ def simple_test():
 
 
 if __name__ == "__main__":
-    simple_test()
-    # task_1()
+    # simple_test()
+    task_1()
     # task_2()

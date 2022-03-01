@@ -86,8 +86,7 @@ def server_receiver(peer_index: PeerIndex, peer_socket: socket.socket) -> None:
             case P2ServerCommands.register:
                 return register(request, peer_index)
             case P2ServerCommands.leave:
-                leave(request, peer_index)
-                raise Exception("Peer leaving server.")
+                return leave(request, peer_index)
             case P2ServerCommands.pquery:
                 return p_query(request, peer_index)
             case P2ServerCommands.keepalive:

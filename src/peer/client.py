@@ -46,6 +46,7 @@ def keep_alive(hostname: str, peer: Peer):
 def rfc_query(hostname: str):
     return P2PCommands.rfcquery, hostname
 
+
 @timethat
 def get_rfc(hostname: str, rfc_number: int, peer_socket: socket.socket):
     @http_request
@@ -56,7 +57,6 @@ def get_rfc(hostname: str, rfc_number: int, peer_socket: socket.socket):
     response = send_recv_http_request(request, peer_socket)
 
     if response.status == SUCCESS_CODE:
-
         rfc: RFC = load_rfc(response)
         filepath = pathlib.Path(rfc.path)
         out_filepath = pathlib.Path("out/").joinpath(pathlib.Path(filepath.name))
@@ -105,10 +105,10 @@ def client_handler(
         match command:
             case P2ServerCommands.register | P2ServerCommands.keepalive:
                 me = load_peer(response)
-                # pprint.pprint(me)
+                pprint.pprint(me)
             case P2ServerCommands.pquery:
                 active_peers = load_peers(response)
-                # pprint.pprint(active_peers)
+                pprint.pprint(active_peers)
 
         return response
 
@@ -133,7 +133,7 @@ def client_handler(
                 case P2PCommands.rfcquery:
                     rfcs = load_rfc_index(response)
                     rfc_index.update(rfcs)
-                    # pprint.pprint(rfc_index)
+                    pprint.pprint(rfc_index)
             return response
 
     def execute_command(command: P2ServerCommands | P2PCommands, args: dict = None):

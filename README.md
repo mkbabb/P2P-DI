@@ -20,21 +20,28 @@ To run the required tasks of the project, first initialize the registration serv
 
     python3 -m src.server.server
 
-Finally, run the `peer` module (with a special `__main__.py` file that allows it to be
-run directly):
+Finally, run the `peer` module (with a special [`__main__.py`](src/peer/__main__.py)
+file that allows it to be run directly):
 
     python3 -m src.peer
 
 This will execute either of the tasks - just comment one, or none out, to change the
 output.
 
+To run the simple test case, execute `__main__.py` without any modifications - using the
+above command.
+
 ## SocketIO
+
+### Layer 1
 
 Low-level socket communication is achieved by way of two layers of abstraction. First,
 each and every message sent and received herein is wrapped by `send_message` and
 `recv_message` (found within [`utils.py`](src/utils/utils.py)). These simple utility
 functions encode the message into a pseudo-TLV format, wherein, the length of the value
 component is included in the high-order 10 bytes of the message.
+
+### Layer 2
 
 The final layer includes a pseudo-HTTP protocol, wherein _nearly_ every message is
 wrapped in. This protocol is almost identical to HTTP in every way, using the low-level

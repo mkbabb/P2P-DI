@@ -136,6 +136,10 @@ HTTPResponseReturn = tuple[int] | tuple[int, dict] | tuple[int, dict, str]
 
 
 def http_request(func: Callable[..., HTTPRequestReturn]):
+    """Decorator that allows for a HTTP request to be returned in a Flask-like manner.
+    The first item returned must be the request method, then the URL path.
+    Optional headers and body content may also be returned."""
+
     @wraps(func)
     def wrapper(*args, **kwargs) -> HTTPRequest:
         method, url, *rest = func(*args, **kwargs)
@@ -156,6 +160,10 @@ def http_request(func: Callable[..., HTTPRequestReturn]):
 
 
 def http_response(func: Callable[..., HTTPResponseReturn]):
+    """Decorator that allows for a HTTP response to be returned in a Flask-like manner.
+    The first item returned must be the integer status code
+    Optional headers and body content may also be returned."""
+
     @wraps(func)
     def wrapper(*args, **kwargs) -> bytes:
         status_code, *rest = func(*args, **kwargs)

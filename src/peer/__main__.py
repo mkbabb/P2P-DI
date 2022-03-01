@@ -133,6 +133,43 @@ def task_2():
         client_thread.start()
 
 
+def simple_test():
+    rfc_count = 2
+
+    rfc_index = make_rfc_index(HOSTNAME, BASE_DIR, rfc_count, False)
+
+    A_port = START_PORT
+    B_port = START_PORT + 1
+
+    A_commands = [
+        (P2ServerCommands.pquery, {}),
+        make_get_rfc(HOSTNAME, B_port, 1),
+        (P2ServerCommands.pquery, {}),
+    ]
+
+    B_commands = [(P2ServerCommands.leave, {})]
+
+    A = create_peer(
+        hostname=HOSTNAME,
+        port=A_port,
+        commands=A_commands,
+        rfc_index=None,
+    )
+    A[0].start()
+
+    B = create_peer(
+        hostname=HOSTNAME,
+        port=B_port,
+        commands=B_commands,
+        rfc_index=rfc_index,
+    )
+    B[0].start()
+
+    A[1].start()
+    B[1].start()
+
+
 if __name__ == "__main__":
+    simple_test()
     # task_1()
-    task_2()
+    # task_2()

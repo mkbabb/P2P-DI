@@ -57,8 +57,10 @@ def timethat(func: Callable[..., Any]):
         delta = (end - start).total_seconds() / 1000
         total_time += delta
 
+        print(f"Timing for {func.__name__}")
         print(f"Took {delta}ms!")
-        print(total_time)
+        print(f"Total time: {total_time}")
+        print()
 
         return result
 

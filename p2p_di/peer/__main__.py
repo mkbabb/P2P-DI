@@ -170,6 +170,6 @@ def simple_test():
 
 
 if __name__ == "__main__":
-    # simple_test()
-    task_1()
+    simple_test()
+    # task_1()
     # task_2()

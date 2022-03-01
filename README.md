@@ -47,12 +47,15 @@ The final layer includes a pseudo-HTTP protocol, wherein _nearly_ every message 
 wrapped in. This protocol is almost identical to HTTP in every way, using the low-level
 facilities found within the Python `http` module - mirrored by
 [`http.py`](src/utils/http.py). This is used to achieve a standardized process whereby
-pseudo-HTTP packets are created and parsed (header creation, content decoding, etc).
+pseudo-HTTP packets are created and parsed (header creation, content decoding, etc). A
+typical packet is very much reminiscent of HTTP/1.1.
 
 These HTTP packets come in two forms, `response` and `request` - again, mirroring the
-standard HTTP/1.1 format.
-
-A typical packet is very much reminiscent of HTTP/1.1.
+standard HTTP/1.1 format. Each has a preamble section - containing an address-like
+string, and headers - as well as an optional `body` section. Like with HTTP/1.1, if the
+body contains any content, the header section **must** contain a `Content-Length`
+attribute - this is automatically added when using the request/response utilities found
+within [`http.py`](src/utils/http.py).
 
 ### `HTTPRequest`
 
@@ -64,7 +67,11 @@ OS: Darwin 21.3.0
 Date: Tue, 01 Mar 2022 00:26:06GMT
 ```
 
-> Example packet from `get_rfc` - notice the header keys are case invariant.
+Above is the typification of the address line, plus the headers section. Notice the
+header keys are case invariant, as is the method. By default, every HTTP object contains
+the following header keys: `Host`, `OS`, `Date`.
+
+> Example packet from `get_rfc`.
 
 ### `HTTPResponse`
 

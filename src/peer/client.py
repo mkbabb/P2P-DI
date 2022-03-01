@@ -2,6 +2,7 @@ import pathlib
 import pprint
 import socket
 import sys
+import threading
 from typing import *
 import time
 
@@ -150,10 +151,17 @@ def client_handler(
     execute_command(P2ServerCommands.register)
     execute_command(P2PCommands.rfcquery, {"hostname": hostname, "port": port})
 
+    keep_alive_thread = threading.Timer(
+        TIMEOUT, execute_command, (P2ServerCommands.keepalive,)
+    )
+    keep_alive_thread.start()
+
     if commands is not None:
         for (command, args) in commands:
             print(command, args)
             execute_command(command, args)
+
+    keep_alive_thread.cancel()
 
 
 def client(hostname: str, port: int, commands: list[tuple[str, dict]] = None):

@@ -16,6 +16,7 @@ from src.utils.http import (
 from src.utils.utils import recv_message, send_message
 
 TIMEOUT = 1.0
+PORT = 65243
 
 
 class P2ServerCommands(Enum):
@@ -23,9 +24,6 @@ class P2ServerCommands(Enum):
     leave = auto()
     pquery = auto()
     keepalive = auto()
-
-
-PORT = 65243
 
 
 @http_response

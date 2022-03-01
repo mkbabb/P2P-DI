@@ -147,8 +147,8 @@ def http_request(func: Callable[..., HTTPRequestReturn]):
 
         request = make_request(method=method, url=url, headers=headers, body=body)
 
-        # r = HTTPRequest(bytes(request))
-        # print(r)
+        r = HTTPRequest(bytes(request))
+        print(r)
 
         return request
 
@@ -164,8 +164,8 @@ def http_response(func: Callable[..., HTTPResponseReturn]):
 
         response = make_response(status_code=status_code, headers=headers, body=body)
 
-        # r = HTTPResponse(bytes(response))
-        # print(r)
+        r = HTTPResponse(bytes(response))
+        print(r)
 
         return response
 

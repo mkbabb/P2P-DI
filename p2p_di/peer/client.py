@@ -19,7 +19,7 @@ from p2p_di.utils.http import (
     make_request,
     send_recv_http_request,
 )
-from p2p_di.utils.utils import recv_message, send_message, timethat
+from p2p_di.utils.utils import receive_message, send_message, timethat
 
 
 @http_request
@@ -61,7 +61,7 @@ def get_rfc(hostname: str, rfc_number: int, peer_socket: socket.socket):
         filepath = pathlib.Path(rfc.path)
         out_filepath = pathlib.Path("out/").joinpath(pathlib.Path(filepath.name))
 
-        response = HTTPResponse(recv_message(peer_socket))
+        response = HTTPResponse(receive_message(peer_socket))
 
         with out_filepath.open("wb") as file:
             file.write(response.content)

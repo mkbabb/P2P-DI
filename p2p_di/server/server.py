@@ -13,7 +13,7 @@ from p2p_di.utils.http import (
     HTTPRequest,
     http_response,
 )
-from p2p_di.utils.utils import recv_message, send_message
+from p2p_di.utils.utils import receive_message, send_message
 
 TIMEOUT = 1.0
 PORT = 65243
@@ -95,7 +95,7 @@ def server_receiver(peer_index: PeerIndex, peer_socket: socket.socket) -> None:
                 return FAIL_RESPONSE()
 
     try:
-        while message := recv_message(peer_socket):
+        while message := receive_message(peer_socket):
             request = HTTPRequest(message)
             if (response := handle(request)) is not None:
                 send_message(response, peer_socket)

@@ -10,7 +10,7 @@ from functools import wraps
 from io import BytesIO
 from typing import *
 
-from p2p_di.utils.utils import recv_message, send_message
+from p2p_di.utils.utils import receive_message, send_message
 
 HTTP_VERSION = "HTTP/1.1"
 
@@ -126,7 +126,7 @@ def send_recv_http_request(
     request: bytes, server_socket: socket.socket
 ) -> HTTPResponse:
     send_message(request, server_socket)
-    response = recv_message(server_socket)
+    response = receive_message(server_socket)
     return HTTPResponse(response)
 
 

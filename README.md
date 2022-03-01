@@ -37,7 +37,7 @@ above command.
 
 Low-level socket communication is achieved by way of two layers of abstraction. First,
 each and every message sent and received herein is wrapped by `send_message` and
-`recv_message` (found within [`utils.py`](p2p_di/utils/utils.py)). These simple utility
+`receive_message` (found within [`utils.py`](p2p_di/utils/utils.py)). These simple utility
 functions encode the message into a pseudo-TLV format, wherein, the length (a 10-byte
 long sequence) of the value component is appended onto the high-order section of the
 message.
